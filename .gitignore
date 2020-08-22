@@ -1,0 +1,9 @@
+/.vs
+/.vscode
+/.devcontainer
+/packages
+bin
+obj
+*.user
+*.nupkg
+*.suo
