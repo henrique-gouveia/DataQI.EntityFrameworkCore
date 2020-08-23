@@ -43,6 +43,7 @@ namespace DataQI.EntityFrameworkCore.Query.Support
                 case WhereOperator.Between:
                     return $"{notOperator}({expression})";
                 case WhereOperator.Equal:
+                case WhereOperator.Null:
                     return expression.Replace("==", "!=");
                 default:
                     return $"{notOperator}{expression}";

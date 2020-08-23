@@ -12,14 +12,14 @@ namespace DataQI.EntityFrameworkCore.Test.Fixtures
             Context.Database.EnsureCreated();
 
             // 1. Default
-            PersonRepository = new PersonRepository(Context);
+            // PersonRepository = new PersonRepository(Context);
 
             // 2. Provided
-            // var repositoryFactory = new EntityRepositoryFactory(Context);
-            // PersonRepository = repositoryFactory.GetRepository<IPersonRepository>();
+            var repositoryFactory = new EntityRepositoryFactory(Context);
+            PersonRepository = repositoryFactory.GetRepository<IPersonRepository>();
         }
 
-        private TestContext CreateTestContext() 
+        private TestContext CreateTestContext()
         {
             var optionsBuilder = new DbContextOptionsBuilder();
             optionsBuilder.UseSqlite("Data Source=TestDb.sqlite3");

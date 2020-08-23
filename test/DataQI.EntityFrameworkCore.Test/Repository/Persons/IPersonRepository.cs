@@ -10,7 +10,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Persons
 
         IEnumerable<Person> FindByFullNameLikeAndActive(string name, bool active = true);
 
-        IEnumerable<Person> FindByEmailLikeAndPhoneIsNotNull(string email);
+        IEnumerable<Person> FindByEmailLikeAndPhoneNotNull(string email);
 
         IEnumerable<Person> FindByDateOfBirthBetween(DateTime startDate, DateTime endDate);
 

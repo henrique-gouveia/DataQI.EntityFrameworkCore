@@ -93,5 +93,14 @@ namespace DataQI.EntityFrameworkCore.Test.Query
 
             Assert.Equal("!@0.Contains(FirstName)", notIn.GetExpressionBuilder().Build(commandBuilder));
         }
+
+        [Fact]
+        public void TestBuildNotNullExpressionCorrectly()
+        {
+            var Null = Restrictions.Null("Email");
+            var notIn = Restrictions.Not(Null);
+
+            Assert.Equal("Email != null", notIn.GetExpressionBuilder().Build(commandBuilder));
+        }
     }
 }

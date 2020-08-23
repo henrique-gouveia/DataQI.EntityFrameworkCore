@@ -38,11 +38,11 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Persons
             return persons;
         }
 
-        public IEnumerable<Person> FindByEmailLikeAndPhoneIsNotNull(string email)
+        public IEnumerable<Person> FindByEmailLikeAndPhoneNotNull(string email)
         {
             var persons = context
                 .Set<Person>()
-                .Where("(email.EndsWith(@0))", email)
+                .Where("(Email.EndsWith(@0) && Phone != null)", email)
                 .AsNoTracking()
                 .ToList();
 

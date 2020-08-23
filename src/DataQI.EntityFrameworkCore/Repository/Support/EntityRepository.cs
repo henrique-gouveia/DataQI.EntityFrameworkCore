@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Dynamic.Core;
 using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using DataQI.Commons.Repository;
 using DataQI.Commons.Util;
 
 using DataQI.EntityFrameworkCore.Extensions;
+using DataQI.EntityFrameworkCore.Query.Support;
 
 namespace DataQI.EntityFrameworkCore.Repository.Support
 {
@@ -57,12 +59,38 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
 
         public IEnumerable<TEntity> Find(Func<ICriteria, ICriteria> criteriaBuilder)
         {
-            throw new NotImplementedException();
+            Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
+
+            var criteria = new EntityCriteria();
+            criteriaBuilder(criteria);
+
+            var entityCommand = criteria.BuildCommand();
+
+            var entities = context
+                .Set<TEntity>()
+                .Where(entityCommand.Command, entityCommand.Values)
+                .AsNoTracking()
+                .ToList();
+
+            return entities;
         }
 
-        public Task<IEnumerable<TEntity>> FindAsync(Func<ICriteria, ICriteria> criteriaBuilder)
+        public async Task<IEnumerable<TEntity>> FindAsync(Func<ICriteria, ICriteria> criteriaBuilder)
         {
-            throw new NotImplementedException();
+            Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
+
+            var criteria = new EntityCriteria();
+            criteriaBuilder(criteria);
+
+            var entityCommand = criteria.BuildCommand();
+
+            var entities = await context
+                .Set<TEntity>()
+                .Where(entityCommand.Command, entityCommand.Values)
+                .AsNoTracking()
+                .ToListAsync();
+
+            return entities;
         }
 
         public IEnumerable<TEntity> FindAll()
