@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using DataQI.Commons.Repository;
+using DataQI.EntityFrameworkCore.Repository;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository.Persons
 {
-    public interface IPersonRepository: ICrudRepository<Person, int>
+    public interface IPersonRepository: IEntityRepository<Person, int>
     {
         IEnumerable<Person> FindByFullName(string fullName);
 
