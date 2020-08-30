@@ -1,18 +1,17 @@
 using System;
 using DataQI.Commons.Repository;
 using DataQI.EntityFrameworkCore.Repository.Support;
-using DataQI.EntityFrameworkCore.Test.Fixtures;
 using Xunit;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository.Persons
 {
-    public class EntityRepositoryFactoryTest : IClassFixture<DbFixture>
+    public class EntityRepositoryFactoryTest
     {
         private readonly TestContext context;
 
-        public EntityRepositoryFactoryTest(DbFixture fixture)
+        public EntityRepositoryFactoryTest()
         {
-            this.context = fixture.Context;
+            this.context = TestContext.NewInstance(":memory:");
         }
 
         [Fact]

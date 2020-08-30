@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
 
     <IsPackable>false</IsPackable>
+    <DebugType>full</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +13,8 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" version="3.1.4" />
     <PackageReference Include="Moq" Version="4.14.4" />
+    <PackageReference Include="Sqlite.Interop.Net46.x64" Version="1.0.109" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.109" />
     <PackageReference Include="xunit" Version="2.4.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
     <PackageReference Include="coverlet.collector" Version="1.2.0" />
