@@ -9,7 +9,7 @@ namespace DataQI.EntityFrameworkCore.Test.Fixtures
         public DbFixture()
         {
             Context = CreateTestContext();
-            Context.Database.EnsureCreated();
+            TryCreateDabase();
 
             // 1. Default
             // PersonRepository = new PersonRepository(Context);
@@ -26,6 +26,18 @@ namespace DataQI.EntityFrameworkCore.Test.Fixtures
 
             var context = new TestContext(optionsBuilder.Options);
             return context;
+        }
+
+        private bool TryCreateDabase()
+        {
+            try
+            {
+                return Context.Database.EnsureCreated();
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public TestContext Context { get; }
