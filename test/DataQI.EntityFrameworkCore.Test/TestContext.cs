@@ -1,7 +1,11 @@
 using System.Linq;
+
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using DataQI.EntityFrameworkCore.Test.Repository.Persons;
+
+using DataQI.EntityFrameworkCore.Test.Repository.Customers;
+using DataQI.EntityFrameworkCore.Test.Repository.Employees;
+using DataQI.EntityFrameworkCore.Test.Repository.Products;
 
 namespace DataQI.EntityFrameworkCore.Test
 {
@@ -12,10 +16,10 @@ namespace DataQI.EntityFrameworkCore.Test
             TryCreateDabase();
         }
 
-        public void ClearPersons()
-        {
-            Persons.RemoveRange(Persons.ToList());
-        }
+        public void ClearCustomers() => Customers.RemoveRange(Customers.ToList());
+        public void ClearDepartments() => Departments.RemoveRange(Departments.ToList());
+        public void ClearEmployess() => Employees.RemoveRange(Employees.ToList());
+        public void ClearProducts() => Products.RemoveRange(Products.ToList());
 
         public static TestContext NewInstance(string dbName = "dbtest.s3db")
         {
@@ -39,6 +43,9 @@ namespace DataQI.EntityFrameworkCore.Test
             }
         }
 
-        public DbSet<Person> Persons { get; private set; }
+        public DbSet<Customer> Customers { get; private set; }
+        public DbSet<Department> Departments { get; private set; }
+        public DbSet<Employee> Employees { get; private set; }
+        public DbSet<Product> Products { get; private set; }
     }
 }

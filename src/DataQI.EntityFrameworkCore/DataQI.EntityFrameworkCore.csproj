@@ -7,7 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.DynamicLinq" Version="1.1.2" />
-    <PackageReference Include="DataQI.Commons" Version="1.1.0-preview" />
+    <PackageReference Include="DataQI.Commons" Version="1.2.0-preview" />
   </ItemGroup>
 
 </Project>

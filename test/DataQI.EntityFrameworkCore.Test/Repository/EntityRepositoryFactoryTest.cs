@@ -1,9 +1,11 @@
 using System;
-using DataQI.Commons.Repository;
-using DataQI.EntityFrameworkCore.Repository.Support;
+
 using Xunit;
 
-namespace DataQI.EntityFrameworkCore.Test.Repository.Persons
+using DataQI.Commons.Repository;
+using DataQI.EntityFrameworkCore.Repository.Support;
+
+namespace DataQI.EntityFrameworkCore.Test.Repository
 {
     public class EntityRepositoryFactoryTest
     {
@@ -11,13 +13,13 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Persons
 
         public EntityRepositoryFactoryTest()
         {
-            this.context = TestContext.NewInstance(":memory:");
+            context = TestContext.NewInstance(":memory:");
         }
 
         [Fact]
         public void TestRejectsNullContext()
         {
-            var exception = Assert.Throws<ArgumentException>(() => 
+            var exception = Assert.Throws<ArgumentException>(() =>
                 new EntityRepositoryFactory(null));
             var baseException = exception.GetBaseException();
 
@@ -34,9 +36,9 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Persons
             Assert.NotNull(entityRepository);
         }
 
-        private interface IEntityRepository : ICrudRepository<Object, int>
+        private interface IEntityRepository : ICrudRepository<object, int>
         {
-            
+
         }
     }
 }

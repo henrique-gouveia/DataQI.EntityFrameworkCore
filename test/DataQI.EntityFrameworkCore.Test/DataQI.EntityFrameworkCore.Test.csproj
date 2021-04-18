@@ -8,6 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Repository\Customer.cs" />
+    <Compile Remove="Repository\CustomerBuilder.cs" />
+    <Compile Remove="Repository\CustomerRepository.cs" />
+    <Compile Remove="Repository\ICustomerRepository.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Bogus" Version="23.0.3" />
     <PackageReference Include="ExpectedObjects" Version="2.3.4" />  
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
