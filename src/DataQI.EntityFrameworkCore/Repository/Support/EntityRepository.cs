@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 using DataQI.Commons.Query;
-using DataQI.Commons.Repository;
 using DataQI.Commons.Util;
 
 using DataQI.EntityFrameworkCore.Extensions;

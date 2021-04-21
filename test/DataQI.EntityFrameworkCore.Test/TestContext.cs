@@ -16,11 +16,6 @@ namespace DataQI.EntityFrameworkCore.Test
             TryCreateDabase();
         }
 
-        public void ClearCustomers() => Customers.RemoveRange(Customers.ToList());
-        public void ClearDepartments() => Departments.RemoveRange(Departments.ToList());
-        public void ClearEmployess() => Employees.RemoveRange(Employees.ToList());
-        public void ClearProducts() => Products.RemoveRange(Products.ToList());
-
         public static TestContext NewInstance(string dbName = "dbtest.s3db")
         {
             var connection = new SqliteConnection($"Data Source={dbName}");
@@ -42,6 +37,11 @@ namespace DataQI.EntityFrameworkCore.Test
                 return false;
             }
         }
+
+        public void ClearCustomers() => Customers.RemoveRange(Customers.ToList());
+        public void ClearDepartments() => Departments.RemoveRange(Departments.ToList());
+        public void ClearEmployess() => Employees.RemoveRange(Employees.ToList());
+        public void ClearProducts() => Products.RemoveRange(Products.ToList());
 
         public DbSet<Customer> Customers { get; private set; }
         public DbSet<Department> Departments { get; private set; }

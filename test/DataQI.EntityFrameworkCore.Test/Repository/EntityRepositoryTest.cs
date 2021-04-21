@@ -14,12 +14,12 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 {
     public class EntityRepositoryTest : IClassFixture<DbFixture>, IDisposable
     {
-        private readonly TestContext context;
+        private readonly TestContext customerContext;
         private readonly ICustomerRepository customerRepository;
 
         public EntityRepositoryTest(DbFixture fixture)
         {
-            context = fixture.Context;
+            customerContext = fixture.CustomerContext;
             customerRepository = fixture.CustomerRepository;
         }
 
@@ -28,7 +28,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         [InlineData(true)]
         public void TestInsert(bool useAsyncMethod)
         {
-            var countBefore = context.Customers.CountAsync().Result;
+            var countBefore = customerContext.Customers.CountAsync().Result;
             var countExpected = ++countBefore;
 
             var customerExpected = CustomerBuilder.NewInstance().Build();
@@ -37,10 +37,10 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             else
                 customerRepository.Insert(customerExpected);
 
-            context.SaveChanges();
+            customerContext.SaveChanges();
 
             Assert.True(customerExpected.Id > 0);
-            Assert.Equal(countExpected, context.Customers.CountAsync().Result);
+            Assert.Equal(countExpected, customerContext.Customers.CountAsync().Result);
         }
 
         [Theory]
@@ -48,7 +48,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         [InlineData(true)]
         public void TestSave(bool useAsyncMethod)
         {
-            var countBefore = context.Set<Customer>().Count();
+            var countBefore = customerContext.Set<Customer>().Count();
             var countExpected = ++countBefore;
 
             var customerInserted = CustomerBuilder.NewInstance().Build();
@@ -57,10 +57,10 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             var customerUpdated = CustomerBuilder.NewInstance().SetId(customerInserted.Id).Build();
             SaveCustomer(customerUpdated, useAsyncMethod);
 
-            var customerFinded = context.Find<Customer>(customerUpdated.Id);
+            var customerFinded = customerContext.Find<Customer>(customerUpdated.Id);
 
             customerUpdated.ToExpectedObject().ShouldMatch(customerFinded);
-            Assert.Equal(countExpected, context.Set<Customer>().Count());
+            Assert.Equal(countExpected, customerContext.Set<Customer>().Count());
         }
 
         private void SaveCustomer(Customer customer, bool useAsyncMethod)
@@ -70,7 +70,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             else
                 customerRepository.Save(customer);
 
-            context.SaveChanges();
+            customerContext.SaveChanges();
         }
 
         [Theory]
@@ -173,7 +173,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
                 else
                     customerRepository.Delete(customer.Id);
 
-                context.SaveChanges();
+                customerContext.SaveChanges();
 
                 Assert.False(ExistsCustomer(customer, useAsyncMethod));
                 Assert.Null(FindOneCustomer(customer, useAsyncMethod));
@@ -271,7 +271,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             customers.ForEach(p =>
             {
                 customerRepository.Save(p);
-                context.SaveChanges();
+                customerContext.SaveChanges();
 
                 Assert.True(customerRepository.Exists(p.Id));
             });
@@ -286,8 +286,8 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         {
             if (!disposedValue)
             {
-                context.ClearCustomers();
-                context.SaveChanges();
+                customerContext.ClearCustomers();
+                customerContext.SaveChanges();
                 disposedValue = true;
             }
         }

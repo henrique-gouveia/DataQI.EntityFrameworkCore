@@ -12,13 +12,13 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 {
     public class EntityRepositoryCustomizedMethodTest : IClassFixture<DbFixture>, IDisposable
     {
-        private readonly TestContext context;
+        private readonly TestContext employeeContext;
 
         private readonly IEmployeeRepository employeeRepository;
 
         public EntityRepositoryCustomizedMethodTest(DbFixture fixture)
         {
-            context = fixture.Context;
+            employeeContext = fixture.EmployeeContext;
             employeeRepository = fixture.EmployeeRepository;
         }
 
@@ -27,16 +27,16 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         [InlineData("Sales")]
         public void TestInsertDepartment(string name)
         {
-            var countBefore = context.Departments.Count();
+            var countBefore = employeeContext.Departments.Count();
             var countExpected = ++countBefore;
 
             var department = new Department(name);
             employeeRepository.InsertDepartment(department);
 
-            context.SaveChanges();
+            employeeContext.SaveChanges();
 
             Assert.True(department.Id > 0);
-            Assert.Equal(countExpected, context.Departments.Count());
+            Assert.Equal(countExpected, employeeContext.Departments.Count());
         }
 
         [Fact]
@@ -63,7 +63,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 
             employeeRepository.InsertDepartment(productionDepartment);
             employeeRepository.InsertDepartment(salesDepartment);
-            context.SaveChanges();
+            employeeContext.SaveChanges();
 
             var employees = new List<Employee>()
             {
@@ -82,7 +82,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         private void InsertTestEmployee(Employee employee)
         {
             employeeRepository.Save(employee);
-            context.SaveChanges();
+            employeeContext.SaveChanges();
 
             Assert.True(employeeRepository.Exists(employee.Id));
         }
@@ -94,9 +94,9 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         {
             if (!disposedValue)
             {
-                context.ClearEmployess();
-                context.ClearDepartments();
-                context.SaveChanges();
+                employeeContext.ClearEmployess();
+                employeeContext.ClearDepartments();
+                employeeContext.SaveChanges();
 
                 disposedValue = true;
             }

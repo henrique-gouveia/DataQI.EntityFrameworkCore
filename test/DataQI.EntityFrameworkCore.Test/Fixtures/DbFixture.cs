@@ -10,7 +10,9 @@ namespace DataQI.EntityFrameworkCore.Test.Fixtures
     {
         public DbFixture()
         {
-            Context = TestContext.NewInstance();
+            CustomerContext = TestContext.NewInstance();
+            EmployeeContext = TestContext.NewInstance();
+            ProductContext = TestContext.NewInstance();
 
             // 1. Default
             // CustomerRepository = new CustomerRepository(Context);
@@ -18,13 +20,19 @@ namespace DataQI.EntityFrameworkCore.Test.Fixtures
             // ProductRepository = new ProductRepository(Context);
 
             // 2. Provided
-            var repositoryFactory = new EntityRepositoryFactory(Context);
+            var repositoryFactory = new EntityRepositoryFactory(CustomerContext);
             CustomerRepository = repositoryFactory.GetRepository<ICustomerRepository>();
-            EmployeeRepository = repositoryFactory.GetRepository<IEmployeeRepository>(new EmployeeRepository(Context));
+
+            repositoryFactory = new EntityRepositoryFactory(EmployeeContext);
+            EmployeeRepository = repositoryFactory.GetRepository<IEmployeeRepository>(new EmployeeRepository(EmployeeContext));
+
+            repositoryFactory = new EntityRepositoryFactory(ProductContext);
             ProductRepository = repositoryFactory.GetRepository<IProductRepository>();
         }
 
-        public TestContext Context { get; }
+        public TestContext CustomerContext { get; }
+        public TestContext EmployeeContext { get; }
+        public TestContext ProductContext { get; }
 
         public ICustomerRepository CustomerRepository { get; }
         public IEmployeeRepository EmployeeRepository { get; }

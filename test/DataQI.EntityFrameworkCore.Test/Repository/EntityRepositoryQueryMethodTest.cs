@@ -12,13 +12,13 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 {
     public class EntityRepositoryQueryMethodTest : IClassFixture<DbFixture>, IDisposable
     {
-        private readonly TestContext context;
+        private readonly TestContext productContext;
 
         private readonly IProductRepository productRepository;
 
         public EntityRepositoryQueryMethodTest(DbFixture fixture)
         {
-            context = fixture.Context;
+            productContext = fixture.ProductContext;
             productRepository = fixture.ProductRepository;
         }
 
@@ -112,7 +112,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             Products.ForEach(p =>
             {
                 productRepository.Save(p);
-                context.SaveChanges();
+                productContext.SaveChanges();
 
                 Assert.True(productRepository.Exists(p.Id));
             });
@@ -127,8 +127,8 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         {
             if (!disposedValue)
             {
-                context.ClearProducts();
-                context.SaveChanges();
+                productContext.ClearProducts();
+                productContext.SaveChanges();
                 disposedValue = true;
             }
         }
