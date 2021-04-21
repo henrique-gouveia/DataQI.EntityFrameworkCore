@@ -1,7 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using DataQI.EntityFrameworkCore.Repository.Support;
-using DataQI.EntityFrameworkCore.Test.Repository.Persons;
-using Microsoft.Data.Sqlite;
+
+using DataQI.EntityFrameworkCore.Test.Repository.Customers;
+using DataQI.EntityFrameworkCore.Test.Repository.Employees;
+using DataQI.EntityFrameworkCore.Test.Repository.Products;
 
 namespace DataQI.EntityFrameworkCore.Test.Fixtures
 {
@@ -9,19 +10,33 @@ namespace DataQI.EntityFrameworkCore.Test.Fixtures
     {
         public DbFixture()
         {
-            Context = TestContext.NewInstance();
+            CustomerContext = TestContext.NewInstance();
+            EmployeeContext = TestContext.NewInstance();
+            ProductContext = TestContext.NewInstance();
 
             // 1. Default
-            // PersonRepository = new PersonRepository(Context);
+            // CustomerRepository = new CustomerRepository(Context);
+            // EmployeeRepository = new EmployeeRepository(Context);
+            // ProductRepository = new ProductRepository(Context);
 
             // 2. Provided
-            var repositoryFactory = new EntityRepositoryFactory(Context);
-            PersonRepository = repositoryFactory.GetRepository<IPersonRepository>();
+            var repositoryFactory = new EntityRepositoryFactory(CustomerContext);
+            CustomerRepository = repositoryFactory.GetRepository<ICustomerRepository>();
+
+            repositoryFactory = new EntityRepositoryFactory(EmployeeContext);
+            EmployeeRepository = repositoryFactory.GetRepository<IEmployeeRepository>(new EmployeeRepository(EmployeeContext));
+
+            repositoryFactory = new EntityRepositoryFactory(ProductContext);
+            ProductRepository = repositoryFactory.GetRepository<IProductRepository>();
         }
 
-        public TestContext Context { get; }
+        public TestContext CustomerContext { get; }
+        public TestContext EmployeeContext { get; }
+        public TestContext ProductContext { get; }
 
-        public IPersonRepository PersonRepository { get; }
+        public ICustomerRepository CustomerRepository { get; }
+        public IEmployeeRepository EmployeeRepository { get; }
+        public IProductRepository ProductRepository { get; }
     }
 }
 

@@ -1,7 +1,9 @@
 using System;
+
+using Microsoft.EntityFrameworkCore;
+
 using DataQI.Commons.Repository.Core;
 using DataQI.Commons.Util;
-using Microsoft.EntityFrameworkCore;
 
 namespace DataQI.EntityFrameworkCore.Repository.Support
 {
