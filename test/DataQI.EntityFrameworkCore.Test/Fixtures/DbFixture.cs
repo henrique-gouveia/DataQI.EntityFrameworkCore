@@ -1,3 +1,4 @@
+using DataQI.EntityFrameworkCore.Repository;
 using DataQI.EntityFrameworkCore.Repository.Support;
 
 using DataQI.EntityFrameworkCore.Test.Repository.Customers;
@@ -15,26 +16,23 @@ namespace DataQI.EntityFrameworkCore.Test.Fixtures
             ProductContext = TestContext.NewInstance();
 
             // 1. Default
-            // CustomerRepository = new CustomerRepository(Context);
+            // CustomerRepository = new EntityRepository<Customer, int>(Context);
             // EmployeeRepository = new EmployeeRepository(Context);
             // ProductRepository = new ProductRepository(Context);
 
             // 2. Provided
-            var repositoryFactory = new EntityRepositoryFactory(CustomerContext);
-            CustomerRepository = repositoryFactory.GetRepository<ICustomerRepository>();
+            var repositoryFactory = new EntityRepositoryFactory();
 
-            repositoryFactory = new EntityRepositoryFactory(EmployeeContext);
-            EmployeeRepository = repositoryFactory.GetRepository<IEmployeeRepository>(new EmployeeRepository(EmployeeContext));
-
-            repositoryFactory = new EntityRepositoryFactory(ProductContext);
-            ProductRepository = repositoryFactory.GetRepository<IProductRepository>();
+            CustomerRepository = repositoryFactory.GetRepository<IEntityRepository<Customer, int>>(CustomerContext);
+            EmployeeRepository = repositoryFactory.GetRepository<IEmployeeRepository>(() => new EmployeeRepository(EmployeeContext));
+            ProductRepository = repositoryFactory.GetRepository<IProductRepository>(ProductContext);
         }
 
         public TestContext CustomerContext { get; }
         public TestContext EmployeeContext { get; }
         public TestContext ProductContext { get; }
 
-        public ICustomerRepository CustomerRepository { get; }
+        public IEntityRepository<Customer, int> CustomerRepository { get; }
         public IEmployeeRepository EmployeeRepository { get; }
         public IProductRepository ProductRepository { get; }
     }

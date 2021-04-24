@@ -10,29 +10,32 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
     public class EntityRepositoryFactoryTest
     {
         private readonly TestContext context;
+        private readonly EntityRepositoryFactory repositoryFactory;
 
         public EntityRepositoryFactoryTest()
         {
             context = TestContext.NewInstance(":memory:");
+            repositoryFactory = new EntityRepositoryFactory();
         }
 
         [Fact]
-        public void TestRejectsNullContext()
-        {
-            var exception = Assert.Throws<ArgumentException>(() =>
-                new EntityRepositoryFactory(null));
-            var baseException = exception.GetBaseException();
+        public void TestRejectsInvalidArgs()
+            => Assert.Throws<MissingMethodException>(() =>
+                repositoryFactory.GetRepository<IEntityRepository>());
 
-            Assert.IsType<ArgumentException>(baseException);
-            Assert.Equal("Context must not be null", baseException.Message);
+        [Fact]
+        public void TestGetRepositoryWithArgsCorrectly()
+        {
+            var entityRepository = repositoryFactory.GetRepository<IEntityRepository>(context);
+            Assert.NotNull(entityRepository);
         }
 
         [Fact]
-        public void TestRejectsNullRepositoryInterface()
+        public void TestGetRepositoryWithRepositoryFactoryCorrectly()
         {
-            var repositoryFactory = new EntityRepositoryFactory(context);
-            var entityRepository = repositoryFactory.GetRepository<IEntityRepository>();
-
+            var entityRepository = repositoryFactory.GetRepository<IEntityRepository>(() => 
+                new EntityRepository<object, int>(context));
+                
             Assert.NotNull(entityRepository);
         }
 

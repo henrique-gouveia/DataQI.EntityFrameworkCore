@@ -9,7 +9,7 @@ using DataQI.EntityFrameworkCore.Repository.Support;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository.Customers
 {
-    public class CustomerRepository : EntityRepository<Customer, int>, ICustomerRepository
+    public class CustomerRepository : EntityRepository<Customer, int>
     {
         public CustomerRepository(DbContext context) : base(context)
         {

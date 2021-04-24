@@ -21,6 +21,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
 
         public EntityRepository(DbContext context)
         {
+            Assert.NotNull(context, "DbContext must not be null");
             this.context = context;
         }
 
