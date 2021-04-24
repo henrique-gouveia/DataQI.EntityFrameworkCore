@@ -29,6 +29,12 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Products
 
         public static ProductBuilder NewInstance() => new ProductBuilder();
 
+        public ProductBuilder SetId(int id)
+        {
+            product.Id = id;
+            return this;
+        }
+
         public ProductBuilder SetActive(bool active)
         {
             product.Active = active;

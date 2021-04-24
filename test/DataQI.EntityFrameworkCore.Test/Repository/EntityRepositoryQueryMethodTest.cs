@@ -56,7 +56,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         }
 
         [Fact]
-        public void TestFindByDepartamentInAndNameLike()
+        public void TestFindByDepartmentInAndNameStartingWith()
         {
             var productList = InsertTestProductsList();
 
@@ -66,10 +66,12 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             while (productEnumerator.MoveNext())
             {
                 var product = productEnumerator.Current;
+                var productNameStartsWith = product.Name.Substring(0, 5);
+
                 var productsExpected = productList.Where(p =>
-                    departments.Any(d => d == p.Department) &&
-                    p.Name.Substring(1, 10) == product.Name.Substring(1, 10));
-                var products = productRepository.FindByDepartmentInAndNameLike(departments.ToArray(), product.Name);
+                    departments.Any(d => d == p.Department) 
+                    && p.Name.StartsWith(productNameStartsWith));
+                var products = productRepository.FindByDepartmentInAndNameStartingWith(departments.ToArray(), productNameStartsWith);
 
                 productsExpected.ToExpectedObject().ShouldMatch(products);
             }

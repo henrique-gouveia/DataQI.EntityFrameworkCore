@@ -7,20 +7,36 @@ using Microsoft.EntityFrameworkCore;
 using ExpectedObjects;
 using Xunit;
 
+using DataQI.Commons.Query;
+using DataQI.Commons.Query.Support;
+
 using DataQI.EntityFrameworkCore.Test.Fixtures;
 using DataQI.EntityFrameworkCore.Test.Repository.Customers;
+using DataQI.EntityFrameworkCore.Repository;
+using DataQI.EntityFrameworkCore.Repository.Support;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository
 {
     public class EntityRepositoryTest : IClassFixture<DbFixture>, IDisposable
     {
         private readonly TestContext customerContext;
-        private readonly ICustomerRepository customerRepository;
+        private readonly IEntityRepository<Customer, int> customerRepository;
 
         public EntityRepositoryTest(DbFixture fixture)
         {
             customerContext = fixture.CustomerContext;
             customerRepository = fixture.CustomerRepository;
+        }
+
+        [Fact]
+        public void TestRejectsNullContext()
+        {
+            var exception = Assert.Throws<ArgumentException>(() =>
+                new EntityRepository<Customer, int>(null));
+            var baseException = exception.GetBaseException();
+
+            Assert.IsType<ArgumentException>(baseException);
+            Assert.Equal("DbContext must not be null", baseException.Message);
         }
 
         [Theory]
@@ -76,7 +92,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void TestExists(bool useAsyncMethod)
+        public void TestExistsReturnsTrue(bool useAsyncMethod)
         {
             var customersExpected = InsertTestCustomers();
 
@@ -92,19 +108,42 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void TestExistsEntityNotFoundReturnsFalse(bool useAsyncMethod)
+        public void TestExistsReturnsFalse(bool useAsyncMethod)
         {
             InsertTestCustomers();
             var customerExists = ExistsCustomer(new Customer(), useAsyncMethod);
             Assert.False(customerExists);
         }
 
-        private bool ExistsCustomer(Customer customer, bool useAsyncMethod)
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TestFind(bool useAsyncMethod)
         {
-            if (useAsyncMethod)
-                return customerRepository.ExistsAsync(customer.Id).Result;
-            else
-                return customerRepository.Exists(customer.Id);
+            var customersList = InsertTestCustomersList();
+            var customersEnumerator = customersList.GetEnumerator();
+
+            while (customersEnumerator.MoveNext())
+            {
+                var customer = customersEnumerator.Current;
+                var customerFullNameStartsWith = customer.FullName.Substring(0, 5);
+
+                Func<ICriteria, ICriteria> criteriaBuilder = criteria =>
+                    criteria.Add(Restrictions.StartingWith($"{nameof(Customer.FullName)}", customerFullNameStartsWith));
+
+                var customersExpected = customersList
+                    .Where(c => c.FullName.StartsWith(customerFullNameStartsWith))
+                    .ToList();
+
+                IEnumerable<Customer> customers;
+
+                if (useAsyncMethod)
+                    customers = customerRepository.FindAsync(criteriaBuilder).Result;
+                else
+                    customers = customerRepository.Find(criteriaBuilder);
+
+                customersExpected.ToExpectedObject().ShouldMatch(customers);
+            }
         }
 
         [Theory]
@@ -126,7 +165,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void TestFindOne(bool useAsyncMethod)
+        public void TestFindOneReturnsEntity(bool useAsyncMethod)
         {
             var customersExpected = InsertTestCustomers();
 
@@ -142,7 +181,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void TestFindOneEntityNotFoundReturnsNull(bool useAsyncMethod)
+        public void TestFindOneReturnsNull(bool useAsyncMethod)
         {
             InsertTestCustomers();
             var customer = FindOneCustomer(new Customer(), useAsyncMethod);
@@ -180,75 +219,12 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             }
         }
 
-        [Fact]
-        public void TestFindByFullName()
+        private bool ExistsCustomer(Customer customer, bool useAsyncMethod)
         {
-            var customersExpected = InsertTestCustomers();
-
-            while (customersExpected.MoveNext())
-            {
-                var customerExpected = customersExpected.Current;
-                var customers = customerRepository.FindByFullName(customerExpected.FullName);
-
-                customerExpected.ToExpectedObject().ShouldMatch(customers.FirstOrDefault());
-            }
-        }
-
-
-        [Fact]
-        public void TestFindByFullNameLikeAndActive()
-        {
-            var customersExpected = InsertTestCustomers();
-
-            while (customersExpected.MoveNext())
-            {
-                var customerExpected = customersExpected.Current;
-                var customers = customerRepository.FindByFullNameLikeAndActive(customerExpected.FullName, customerExpected.Active);
-
-                customerExpected.ToExpectedObject().ShouldMatch(customers.FirstOrDefault());
-            }
-        }
-
-        [Fact]
-        public void TestFindByEmailLikeAndPhoneNotNull()
-        {
-            var customersExpected = InsertTestCustomers();
-
-            while (customersExpected.MoveNext())
-            {
-                var customerExpected = customersExpected.Current;
-                var customers = customerRepository.FindByEmailLikeAndPhoneNotNull(customerExpected.Email);
-
-                customerExpected.ToExpectedObject().ShouldMatch(customers.FirstOrDefault());
-            }
-        }
-
-        [Fact]
-        public void TestFindByDateOfBirthBetween()
-        {
-            var customersExpected = InsertTestCustomers();
-
-            while (customersExpected.MoveNext())
-            {
-                var customerExpected = customersExpected.Current;
-                var customers = customerRepository.FindByDateOfBirthBetween(customerExpected.DateOfBirth, customerExpected.DateOfBirth);
-
-                customerExpected.ToExpectedObject().ShouldMatch(customers.FirstOrDefault());
-            }
-        }
-
-        [Fact]
-        public void TestFindByDateRegisterLessThanEqualOrDateOfBirthGreaterThan()
-        {
-            var customersList = InsertTestCustomersList();
-
-            var dateRegisterMax = customersList.Select(p => p.DateRegister).Max();
-            var dateOfBirthMin = customersList.Select(p => p.DateOfBirth).Min();
-
-            var customersExpected = customersList.Where(p => p.DateRegister < dateRegisterMax || p.DateOfBirth >= dateOfBirthMin);
-
-            var customers = customerRepository.FindByDateRegisterLessThanEqualOrDateOfBirthGreaterThan(dateRegisterMax, dateOfBirthMin);
-            customersExpected.ToExpectedObject().ShouldMatch(customers);
+            if (useAsyncMethod)
+                return customerRepository.ExistsAsync(customer.Id).Result;
+            else
+                return customerRepository.Exists(customer.Id);
         }
 
         private IEnumerator<Customer> InsertTestCustomers()

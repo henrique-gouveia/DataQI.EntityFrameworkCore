@@ -8,7 +8,7 @@ using DataQI.EntityFrameworkCore.Repository.Support;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository.Products
 {
-    public class ProductRepository : EntityRepository<Product, int>, IProductRepository
+    public class ProductRepository : EntityRepository<Product, int>
     {
         public ProductRepository(DbContext context) : base(context)
         {
@@ -48,7 +48,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Products
             return products;
         }
 
-        public IEnumerable<Product> FindByDepartmentInAndNameLike(string[] departments, string name)
+        public IEnumerable<Product> FindByDepartmentInAndNameStartingWith(string[] departments, string name)
         {
             var products = context
                 .Set<Product>()
