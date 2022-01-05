@@ -15,7 +15,7 @@ using DataQI.EntityFrameworkCore.Query.Support;
 namespace DataQI.EntityFrameworkCore.Repository.Support
 {
     public class EntityRepository<TEntity, TId> : IEntityRepository<TEntity, TId>
-        where TEntity : class, new()
+        where TEntity : class
     {
         protected DbContext context;
 

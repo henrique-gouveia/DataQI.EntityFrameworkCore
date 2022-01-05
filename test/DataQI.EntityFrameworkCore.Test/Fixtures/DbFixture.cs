@@ -14,13 +14,7 @@ namespace DataQI.EntityFrameworkCore.Test.Fixtures
             CustomerContext = TestContext.NewInstance();
             EmployeeContext = TestContext.NewInstance();
             ProductContext = TestContext.NewInstance();
-
-            // 1. Default
-            // CustomerRepository = new EntityRepository<Customer, int>(Context);
-            // EmployeeRepository = new EmployeeRepository(Context);
-            // ProductRepository = new ProductRepository(Context);
-
-            // 2. Provided
+            
             var repositoryFactory = new EntityRepositoryFactory();
 
             CustomerRepository = repositoryFactory.GetRepository<IEntityRepository<Customer, int>>(CustomerContext);
