@@ -1,7 +1,9 @@
-using Microsoft.EntityFrameworkCore;
+using DataQI.EntityFrameworkCore.Repository;
 using DataQI.EntityFrameworkCore.Repository.Support;
-using DataQI.EntityFrameworkCore.Test.Repository.Persons;
-using Microsoft.Data.Sqlite;
+
+using DataQI.EntityFrameworkCore.Test.Repository.Customers;
+using DataQI.EntityFrameworkCore.Test.Repository.Employees;
+using DataQI.EntityFrameworkCore.Test.Repository.Products;
 
 namespace DataQI.EntityFrameworkCore.Test.Fixtures
 {
@@ -9,19 +11,24 @@ namespace DataQI.EntityFrameworkCore.Test.Fixtures
     {
         public DbFixture()
         {
-            Context = TestContext.NewInstance();
+            CustomerContext = TestContext.NewInstance();
+            EmployeeContext = TestContext.NewInstance();
+            ProductContext = TestContext.NewInstance();
+            
+            var repositoryFactory = new EntityRepositoryFactory();
 
-            // 1. Default
-            // PersonRepository = new PersonRepository(Context);
-
-            // 2. Provided
-            var repositoryFactory = new EntityRepositoryFactory(Context);
-            PersonRepository = repositoryFactory.GetRepository<IPersonRepository>();
+            CustomerRepository = repositoryFactory.GetRepository<IEntityRepository<Customer, int>>(CustomerContext);
+            EmployeeRepository = repositoryFactory.GetRepository<IEmployeeRepository>(() => new EmployeeRepository(EmployeeContext));
+            ProductRepository = repositoryFactory.GetRepository<IProductRepository>(ProductContext);
         }
 
-        public TestContext Context { get; }
+        public TestContext CustomerContext { get; }
+        public TestContext EmployeeContext { get; }
+        public TestContext ProductContext { get; }
 
-        public IPersonRepository PersonRepository { get; }
+        public IEntityRepository<Customer, int> CustomerRepository { get; }
+        public IEmployeeRepository EmployeeRepository { get; }
+        public IProductRepository ProductRepository { get; }
     }
 }
 

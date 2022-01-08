@@ -2,13 +2,13 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace DataQI.EntityFrameworkCore.Test.Repository.Persons
+namespace DataQI.EntityFrameworkCore.Test.Repository.Customers
 {
-    [Table("PERSON")]
-    public class Person
+    [Table("CUSTOMER")]
+    public class Customer
     {
         [Key]
-        [Column("PERSON_ID")]
+        [Column("CUSTOMER_ID")]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 

@@ -2,9 +2,9 @@
 
 Data Query Interface Provider for [EntityFrameworkCore](https://github.com/dotnet/efcore) written in C# and built around essential features of the .NET Standard that use infraestructure provided by [DataQI.Commons](https://github.com/henrique-gouveia/DataQI.Commons) and it turns your Data Repositories a live interface. Its purpose is to facilitate the construction of data access layers and makes possible the definition repository interfaces, providing behaviors for standard operations as well to defines customized queries through method signatures.
 
-[![NuGet](https://img.shields.io/nuget/v/DataQI.EntityFrameworkCore.svg)](https://www.nuget.org/packages/DataQI.EntityFrameworkCore/)
-[![Build status](https://ci.appveyor.com/api/projects/status/rl2ja69994rt3ei6?svg=true)](https://ci.appveyor.com/project/henrique-gouveia/dataqi-entityframeworkcore)
+[![Build](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml/badge.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml)
 [![codecov](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore/branch/master/graph/badge.svg)](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore)
+[![NuGet](https://img.shields.io/nuget/v/DataQI.EntityFrameworkCore.svg)](https://www.nuget.org/packages/DataQI.EntityFrameworkCore/)
 
 ## Getting Started
 
@@ -53,9 +53,9 @@ Should to use a instance of the `EntityRepositoryFactory` class to instantiate a
 
 ```csharp
 DbContext dbContext = CreateDbContext();
-var repositoryFactory = new EntityRepositoryFactory(dbContext);
+var repositoryFactory = new EntityRepositoryFactory();
 
-personRepository = repositoryFactory.GetRepository<IPersonRepository>();
+personRepository = repositoryFactory.GetRepository<IPersonRepository>(dbContext);
 ```
 
 ### Using Default Methods
@@ -123,10 +123,10 @@ Customized Queries can be defined through method signatures with the following c
 | **NotEqual** | FindByName**Not**, FindByName**NotEqual** | where Name **!=** @0
 | **Between** | FindByAge**Between** | where Age **>=** @0 **&&** Age **<=** @1
 | **NotBetween** | FindByAge**NotBetween** | where !(Age **>=** @0 **&&** Age **<=** @1)
-| **GreaterThan** | FindByDateOfBirth**GreaterThan** | where DateOfBirth **>** @0
-| **GreaterThanEqual** | FindByDateOfBirth**GreaterThanEqual** | where DateOfBirth **>=** @0
-| **LessThan** | FindByDateOfBirth**LessThan** | where DateOfBirth **<** @0
-| **LessThanEqual** | FindByDateOfBirth**LessThanEqual** | where DateOfBirth **<=** @0
+| **GreaterThan** | FindByBirthDate**GreaterThan** | where BirthDate **>** @0
+| **GreaterThanEqual** | FindByBirthDate**GreaterThanEqual** | where BirthDate **>=** @0
+| **LessThan** | FindByBirthDate**LessThan** | where BirthDate **<** @0
+| **LessThanEqual** | FindByBirthDate**LessThanEqual** | where BirthDate **<=** @0
 | **In** | FindByAddressType**In** | where **@0.Contains**(AddressType)
 | **NotIn** | FindByAddressType**NotIn** | where !**@0.Contains**(AddressType)
 | **Null** | FindByEmail**Null** | where Email **== null**
@@ -148,25 +148,80 @@ Customized Queries can be defined through method signatures with the following c
 public interface IPersonRepository : IEntityRepository<Person, int>
 {
     IEnumerable<Person> FindByLastName(string name);
-    IEnumerable<Person> FindByDateOfBirthBetween(DateTime startDate, DateTime endDate);
+    IEnumerable<Person> FindByBirthDateBetween(DateTime startDate, DateTime endDate);
     IEnumerable<Person> FindByFirstNameLikeAndActive(string name, bool active = true);
     IEnumerable<Person> FindByEmailLikeOrPhoneNotNull(string email);
-    IEnumerable<Person> FindByFirstNameAndLastNameOrDateOfBirthGreaterThan(string firstName, string lastName, DateTime registerDate);
+    IEnumerable<Person> FindByFirstNameAndLastNameOrBirthDateGreaterThan(string firstName, string lastName, DateTime registerDate);
 }
 
 DbContext dbContext = CreateDbContext();
-var repositoryFactory = new EntityRepositoryFactory(dbContext);
+var repositoryFactory = new EntityRepositoryFactory();
 
-var personRepository = factory.GetRepository<IPersonRepository>();
+var personRepository = factory.GetRepository<IPersonRepository>(dbContext);
 
 var persons = personRepository.FindByLastName("A Last Name");
-persons = personRepository.FindByDateOfBirthBetween(new DateTime(2015, 1, 1), new DateTime(2020, 1, 1));
+persons = personRepository.FindByBirthDateBetween(new DateTime(2015, 1, 1), new DateTime(2020, 1, 1));
 persons = personRepository.FindByFirstNameLikeAndActive(string name, bool active = true);
 persons = personRepository.FindByEmailLikeOrPhoneNotNull(string email);
-persons = personRepository.FindFindByFirstNameAndLastNameOrDateOfBirthGreaterThan("A First Name", "A Last Name", new DateTime(2019, 1, 1));
+persons = personRepository.FindFindByFirstNameAndLastNameOrBirthDateGreaterThan("A First Name", "A Last Name", new DateTime(2019, 1, 1));
+```
+
+### Using Customized Methods
+
+Customized Methods can be defined as normal class:
+
+- The method should be defined in the repository interface.
+- The class with implementation may or may not implement the interface.
+- This can be used for any kind of customization that you want.
+
+```csharp
+public interface IPersonRepository : IEntityRepository<Person>
+{
+    // Query Methods
+    IEnumerable<Person> FindByEmailNotNull();
+    IEnumerable<Person> FindByFirstNameStartingWith(string firstName);
+
+    // Customized Methods
+    void AddAll(IEnumerable<Person> persons);
+}
+
+public class PersonRepository : EntityRepository<Person>
+{
+    public void AddAll(IEnumerable<Person> persons)
+    {
+        foreach (var person in persons)
+        {
+            this.Insert(person)
+        }
+    }
+}
+
+// Getting Repository
+DbContext dbContext = CreateDbContext();
+var repositoryFactory = new EntityRepositoryFactory();
+
+var personRepository = factory.GetRepository<IPersonRepository>(() => new PersonRepository(dbContext));
+
+// Using Query Methods
+var persons = personRepository.FindByEmailNotNull();
+persons = personRepository.FindByFirstNameStartingWith("Name");
+
+// Using Customized Methods
+person1 = new Person() {...};
+person2 = new Person() {...};
+person3 = new Person() {...};
+
+personRepository.AddAll(new List<Person> { person1, person2, person3 });
 ```
 
 ## News
+
+**v1.1.0 - 2021/01**
+
+* New! Added support to new Repository Factory features
+* New! Added capability to invokes non-standard methods defined on client
+* Change! _TEntity_ requirements on generic interface _IEntityRepository_
+* **Break Change!** Removed _DbContext_ as argument on _EntityRepositoryFactory_ constructor
 
 **v1.0.0 - 2020/09**
 

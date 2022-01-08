@@ -1,31 +1,23 @@
 using System;
+
 using DataQI.Commons.Repository.Core;
 using DataQI.Commons.Util;
-using Microsoft.EntityFrameworkCore;
 
 namespace DataQI.EntityFrameworkCore.Repository.Support
 {
     public class EntityRepositoryFactory : RepositoryFactory
-    {
-        private readonly DbContext context;
-
-        public EntityRepositoryFactory(DbContext context)
+    {        
+        protected override object GetRepositoryInstance(Type repositoryType, params object[] args)
         {
-            Assert.NotNull(context, "Context must not be null");
-            this.context = context;
-        }
+            Assert.NotNull(repositoryType, "Repository Type must not be null");
 
-        protected override object GetCustomImplementation(Type repositoryInterface)
-        {
-            Assert.NotNull(repositoryInterface, "RepositoryInterface must not be null");
+            var repositoryMetadata = GetRepositoryMetadata(repositoryType);
 
-            var repositoryMetadata = GetRepositoryMetadata(repositoryInterface);
+            var entityRepositoryType = typeof(EntityRepository<,>);
+            var repositoryInstanceType = entityRepositoryType.MakeGenericType(repositoryMetadata.EntityType, repositoryMetadata.IdType);
 
-            var entityImplementationType = typeof(EntityRepository<,>);
-            var customImplementationType = entityImplementationType.MakeGenericType(repositoryMetadata.EntityType, repositoryMetadata.IdType);
-            var customImplementation = Activator.CreateInstance(customImplementationType, new[] { context });
-
-            return customImplementation;
+            var repositoryInstance = Activator.CreateInstance(repositoryInstanceType, args);
+            return repositoryInstance;
         }
     }
 }
