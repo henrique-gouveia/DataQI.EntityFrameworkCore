@@ -3,7 +3,7 @@
 Data Query Interface Provider for [EntityFrameworkCore](https://github.com/dotnet/efcore) written in C# and built around essential features of the .NET Standard that use infraestructure provided by [DataQI.Commons](https://github.com/henrique-gouveia/DataQI.Commons) and it turns your Data Repositories a live interface. Its purpose is to facilitate the construction of data access layers and makes possible the definition repository interfaces, providing behaviors for standard operations as well to defines customized queries through method signatures.
 
 [![Build](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml/badge.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml)
-[![codecov](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore/branch/master/graph/badge.svg)](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore)
+[![codecov](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore/branch/main/graph/badge.svg)](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore)
 [![NuGet](https://img.shields.io/nuget/v/DataQI.EntityFrameworkCore.svg)](https://www.nuget.org/packages/DataQI.EntityFrameworkCore/)
 
 ## Getting Started
@@ -216,7 +216,7 @@ personRepository.AddAll(new List<Person> { person1, person2, person3 });
 
 ## News
 
-**v1.1.0 - 2021/01**
+**v1.1.0 - 2022/01**
 
 * New! Added support to new Repository Factory features
 * New! Added capability to invokes non-standard methods defined on client
