@@ -95,13 +95,21 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
 
         public IEnumerable<TEntity> FindAll()
         {
-            var entities = context.Set<TEntity>().AsNoTracking().ToList();
+            var entities = context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .ToList();
+
             return entities;
         }
 
         public async Task<IEnumerable<TEntity>> FindAllAsync()
         {
-            var entities = await context.Set<TEntity>().AsNoTracking().ToListAsync();
+            var entities = await context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .ToListAsync();
+
             return entities;
         }
 
@@ -137,17 +145,12 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             Assert.NotNull(entity, "Entity must not be null");
 
             var entityId = context.KeyOf<TEntity, TId>(entity);
-            var entityExistent = FindOne(entityId);
-            
-            if (entityExistent == null)
-            {
+            var existingEntity = FindOne(entityId);
+
+            if (existingEntity == null)
                 Insert(entity);
-            }
             else
-            {
-                context.Entry(entityExistent).CurrentValues.SetValues(entity);
-                entity = entityExistent;
-            }
+                ChangeExistingEntityValues(existingEntity, entity);
         }
 
         public async Task SaveAsync(TEntity entity)
@@ -155,17 +158,19 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             Assert.NotNull(entity, "Entity must not be null");
 
             var entityId = context.KeyOf<TEntity, TId>(entity);
-            var entityExistent = await FindOneAsync(entityId);
+            var existingEntity = await FindOneAsync(entityId);
            
-            if (entityExistent == null)
-            {
+            if (existingEntity == null)
                 await InsertAsync(entity);
-            }
             else
-            {
-                context.Entry(entityExistent).CurrentValues.SetValues(entity);
-                entity = entityExistent;
-            }
+                ChangeExistingEntityValues(existingEntity, entity);
+        }
+
+        private void ChangeExistingEntityValues(TEntity existing, TEntity entity)
+        {
+            var entityEntry = context.Entry(existing);
+            entityEntry.CurrentValues.SetValues(entity);
+            entityEntry.State = EntityState.Modified;
         }
 
         #region IDisposable Support

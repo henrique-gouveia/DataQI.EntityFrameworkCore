@@ -22,7 +22,7 @@
     </PackageReference>
     <PackageReference Include="ExpectedObjects" Version="2.3.4" />  
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" version="3.1.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" version="3.1.26" />
     <PackageReference Include="Moq" Version="4.14.4" />
     <PackageReference Include="Sqlite.Interop.Net46.x64" Version="1.0.109" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.109" />
