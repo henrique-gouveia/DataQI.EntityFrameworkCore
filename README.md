@@ -216,14 +216,18 @@ personRepository.AddAll(new List<Person> { person1, person2, person3 });
 
 ## News
 
+**v2.0.0 - 2022/06**
+
+- Change! Added support to the `EntityFrameworkCore` latest 5th major version
+
 **v1.2.0 - 2022/06**
 
-- Change! Updated support to the `EntityFrameworkCore` latest 3rd major version
+- Change! Added support to the `EntityFrameworkCore` latest 3rd major version
 - Change! `EntityRepository` sets `EntityEntry.State` explicity to `EntityState.Modified` when change an `Entity`
 
 **v1.1.0 - 2022/01**
 
-- New! Added support to new Repository Factory features
+- New! Added support to the new `RepositoryFactory` features
 - New! Added capability to invokes non-standard methods defined on client
 - Change! `TEntity` requirements on generic interface `IEntityRepository`
 - **Breaking Change!** Removed `DbContext` as argument on `EntityRepositoryFactory` constructor
