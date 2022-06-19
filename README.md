@@ -216,6 +216,10 @@ personRepository.AddAll(new List<Person> { person1, person2, person3 });
 
 ## News
 
+**v2.1.0 - 2022/06**
+
+- Change! Adjusted the supported minor version of `EntityFrameworkCore` 5
+
 **v2.0.0 - 2022/06**
 
 - Change! Added support to the `EntityFrameworkCore` latest 5th major version
