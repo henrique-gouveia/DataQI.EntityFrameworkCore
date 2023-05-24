@@ -89,4 +89,4 @@ jobs:
     - name: Publish
       env:
         NUGET_AUTH_TOKEN: ${{ secrets.NUGET_AUTH_TOKEN }}
-      run: dotnet nuget push --api-key $NUGET_AUTH_TOKEN --source https://api.nuget.org/v3/index.json  *.nupkg
+      run: dotnet nuget push --skip-duplicate --api-key $NUGET_AUTH_TOKEN --source https://api.nuget.org/v3/index.json  *.nupkg
