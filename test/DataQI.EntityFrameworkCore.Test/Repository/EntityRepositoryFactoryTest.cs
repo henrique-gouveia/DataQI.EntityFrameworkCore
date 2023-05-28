@@ -7,7 +7,7 @@ using DataQI.EntityFrameworkCore.Repository.Support;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository
 {
-    public class EntityRepositoryFactoryTest
+    public sealed class EntityRepositoryFactoryTest
     {
         private readonly TestContext context;
         private readonly EntityRepositoryFactory repositoryFactory;
