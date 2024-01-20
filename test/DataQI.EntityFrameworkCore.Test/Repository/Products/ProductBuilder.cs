@@ -10,7 +10,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Products
         private ProductBuilder()
         {
             var faker = new Faker();
-            var price = faker.Random.Decimal(max: 1000);
+            var price = Math.Round(faker.Random.Decimal(max: 1000), 2);
 
             product = new Product()
             {

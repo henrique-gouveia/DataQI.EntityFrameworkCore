@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{471D01CC-D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataQI.EntityFrameworkCore.Test", "test\DataQI.EntityFrameworkCore.Test\DataQI.EntityFrameworkCore.Test.csproj", "{0A3D5CF6-49F3-4F6B-9393-B88D9CF002E0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataQI.EntityFrameworkCore.Benchmarks", "test\DataQI.EntityFrameworkCore.Benchmarks\DataQI.EntityFrameworkCore.Benchmarks.csproj", "{5B66AE52-7E5B-4E1C-BECE-D2C984555755}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,9 +50,22 @@ Global
 		{0A3D5CF6-49F3-4F6B-9393-B88D9CF002E0}.Release|x64.Build.0 = Release|Any CPU
 		{0A3D5CF6-49F3-4F6B-9393-B88D9CF002E0}.Release|x86.ActiveCfg = Release|Any CPU
 		{0A3D5CF6-49F3-4F6B-9393-B88D9CF002E0}.Release|x86.Build.0 = Release|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Debug|x64.Build.0 = Debug|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Debug|x86.Build.0 = Debug|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Release|x64.ActiveCfg = Release|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Release|x64.Build.0 = Release|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Release|x86.ActiveCfg = Release|Any CPU
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{AB1F8E3C-2F40-4129-92D4-CE654CB9CEC6} = {BC2307C9-A982-4A6C-A384-11A16A454774}
 		{0A3D5CF6-49F3-4F6B-9393-B88D9CF002E0} = {471D01CC-DF50-4A45-A462-BEE5101499F5}
+		{5B66AE52-7E5B-4E1C-BECE-D2C984555755} = {471D01CC-DF50-4A45-A462-BEE5101499F5}
 	EndGlobalSection
 EndGlobal
