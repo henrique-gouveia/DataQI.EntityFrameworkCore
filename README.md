@@ -5,6 +5,7 @@ Data Query Interface Provider for [EntityFrameworkCore](https://github.com/dotne
 [![Build](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml/badge.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml)
 [![codecov](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore/branch/main/graph/badge.svg)](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore)
 [![NuGet](https://img.shields.io/nuget/v/DataQI.EntityFrameworkCore.svg)](https://www.nuget.org/packages/DataQI.EntityFrameworkCore/)
+[![License](https://img.shields.io/github/license/henrique-gouveia/DataQI.EntityFrameworkCore.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/blob/main/LICENSE.txt)
 
 ## Getting Started
 
@@ -57,6 +58,44 @@ var repositoryFactory = new EntityRepositoryFactory();
 
 personRepository = repositoryFactory.GetRepository<IPersonRepository>(dbContext);
 ```
+
+### Configuring by using Microsoft's Dependency Injection
+
+After you have installed this lib, if you're using some type of .NET Web Application, you can do the following:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+```
+
+Don't forget to configure your `DbContext`:
+
+```csharp
+// Configure DbContext like you prefer...
+builder.Services.AddDbContext<DbContext>(...);
+```
+
+If you don't need a specific repository interface, you can just register a service by doing the following:
+
+```csharp
+// It'll add IEntityRepository<Entity, int> repository service...
+builder.Services.AddDefaultEntityRepository<Person, int, DbContext>();
+```
+
+If you need a specific repository interface, you can register it by doing the following:
+
+```csharp
+// It'll add IPersonRepository repository service...
+builder.Services.AddEntityRepository<IPersonRepository, DbContext>();
+```
+
+Now, if you need to add custom support using a repository implementation, you can register it by doing the following:
+
+```csharp
+// It'll add IPersonRepository repository service supported by SomeCustomRepository ...
+builder.Services.AddEntityRepository<IPersonRepository, SomeCustomRepository, DbContext>();
+```
+
+Take a look at the [Samples](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/tree/main/samples) to see how this works.
 
 ### Using Default Methods
 
@@ -138,7 +177,7 @@ Customized Queries can be defined through method signatures with the following c
 | **Containing** | FindByName**Containing** | where Name.**Contains(@0)**
 | **NotContaining** | FindByName**NotContaining** | where !Name.**Contains(@0)**
 | **Like** | FindByName**Like** | where Name.**Contains(@0)**
-| **NotLike** | FindByName**NotLike** | where where !Name.**Contains(@0)**
+| **NotLike** | FindByName**NotLike** | where !Name.**Contains(@0)**
 | **And** | FindByName**And**Email | where (Name = @0 **&&** Email = @1)
 | **Or** | FindByName**Or**Email | where (Name = @0 **\|\|** Email = @1)
 
@@ -175,7 +214,7 @@ Customized Methods can be defined as normal class:
 - This can be used for any kind of customization that you want.
 
 ```csharp
-public interface IPersonRepository : IEntityRepository<Person>
+public interface IPersonRepository : IEntityRepository<Person, int>
 {
     // Query Methods
     IEnumerable<Person> FindByEmailNotNull();
@@ -185,7 +224,7 @@ public interface IPersonRepository : IEntityRepository<Person>
     void AddAll(IEnumerable<Person> persons);
 }
 
-public class PersonRepository : EntityRepository<Person>
+public class PersonRepository : EntityRepository<Person, int>
 {
     public void AddAll(IEnumerable<Person> persons)
     {
@@ -214,15 +253,60 @@ person3 = new Person() {...};
 personRepository.AddAll(new List<Person> { person1, person2, person3 });
 ```
 
-## News
+## Performance
+
+The following metrics show how long it takes to execute top CRUD statements on a SQLServer database, comparing the provider to dry Entity Framework Core.
+
+The benchmarks can be found at [DataQI.EntityFrameworkCore.Benchmarks](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/tree/main/test/DataQI.EntityFrameworkCore.Benchmarks) (contributions welcome!) and can be run via:
+
+```bash
+dotnet run --project .\test\DataQI.EntityFrameworkCore.Benchmarks\DataQI.EntityFrameworkCore.Benchmarks.csproj  -f net6.0 -c Release
+```
+
+```
+
+BenchmarkDotNet v0.13.12, Windows 10 (10.0.19045.3930/22H2/2022Update)
+Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical cores
+.NET SDK 7.0.405
+  [Host] : .NET 6.0.3 (6.0.322.12309), X64 RyuJIT AVX2
+  Dry    : .NET 6.0.3 (6.0.322.12309), X64 RyuJIT AVX2
+
+```
+
+| Lib         | Method               | Note                     | Op Count  | Mean      | StdDev    | Error     | Gen0      | Gen1     | Gen2     | Allocated  |
+|-------------|----------------------|------------------------- | ---------:|----------:|----------:|----------:|----------:|---------:|---------:|-----------:|
+| Pure EfCore | FindAll&lt;T&gt;     | Select ~10,000 rows / op |    10,000 | 23.180 ms | 2.5252 ms | 2.1928 ms |  738.0000 | 278.0000 | 118.0000 | 3872.01 KB |
+| DataQI      | FindAll&lt;T&gt;     | Select ~10,000 rows / op |    10,000 | 23.538 ms | 3.4966 ms | 3.0363 ms |  742.0000 | 272.0000 | 108.0000 | 3954.12 KB |
+| Pure EfCore | FindOne&lt;T&gt;     | Select 1 row / op        |    10,000 |  1.161 ms | 0.3173 ms | 0.2755 ms |    2.0000 |        - |        - |   13.93 KB |
+| DataQI      | FindOne&lt;T&gt;     | Select 1 row / op        |    10,000 |  1.168 ms | 0.3198 ms | 0.2777 ms |    2.0000 |        - |        - |   13.98 KB |
+| Pure EfCore | CustomQuery&lt;T&gt; | Select 1 row / op        |    10,000 | 10.372 ms | 0.5653 ms | 0.4909 ms |    2.0000 |        - |        - |   13.34 KB |
+| DataQI      | CustomQuery&lt;T&gt; | Select 1 row / op        |    10,000 | 12.232 ms | 0.4576 ms | 0.3973 ms |   18.0000 |   2.0000 |        - |  112.02 KB |
+| Pure EfCore | Insert&lt;T&gt;      | Insert 1 row / op        |    10,000 | 15.053 ms | 4.9835 ms | 4.3275 ms | 1886.0000 |   4.0000 |        - | 7704.21 KB |
+| DataQI      | Insert&lt;T&gt;      | Insert 1 row / op        |    10,000 | 15.220 ms | 5.4845 ms | 4.7625 ms | 1886.0000 |   4.0000 |        - | 7704.29 KB |
+| Pure EfCore | Update&lt;T&gt;      | Update 1 row / op        |    10,000 | 13.906 ms | 3.5626 ms | 3.0936 ms | 1884.0000 |   4.0000 |        - | 7700.69 KB |
+| DataQI      | Update&lt;T&gt;      | Update 1 row / op        |    10,000 | 16.803 ms | 4.8685 ms | 4.2276 ms | 1888.0000 |   6.0000 |        - | 7715.53 KB |
+| Pure EfCore | Delete&lt;T&gt;      | Delete 1 row / op        |    10,000 |  9.193 ms | 3.7906 ms | 3.2916 ms |    6.0000 |        - |        - |   25.34 KB |
+| DataQI      | Delete&lt;T&gt;      | Delete 1 row / op        |    10,000 |  9.195 ms | 0.4882 ms | 0.4239 ms |    6.0000 |        - |        - |   24.54 KB |
+
+## Limitations and caveats
+
+The DataQI EntityFrameworkCore Provider library is not an ORM or it attempts to solve all data persistence problems. It provides a structure based on Repository Pattern that facilitates the rapid creation of repositories with methods that allow the creation, modification and deletion of data, as well as the preparation of simple queries by signing the methods declared in an interface, in order to avoid most of the effort involved in writing standard code in projects that use the [EntityFrameworkCore](https://github.com/dotnet/efcore) library.
+
+## Release Notes
+
+**v3.1.0 - 2023/01**
+
+- New! Added project to perform benchmarks
+- New! Added support to register repositories for Microsoft's Dependency Injection
+- New! Added sample project
 
 **v3.0.0 - 2022/06**
 
-- Change! Added support to the `EntityFrameworkCore` 6
+- Change! Updated minimum version of supported `EntityFrameworkCore` to the lastest 6th major version
 
 **v2.1.0 - 2022/06**
 
-- Change! Adjusted the supported minor version of `EntityFrameworkCore` 5
+- Change! Updated minimum version of supported `EntityFrameworkCore` to the lastest 5th major version
 
 **v2.0.0 - 2022/06**
 
@@ -243,10 +327,6 @@ personRepository.AddAll(new List<Person> { person1, person2, person3 });
 **v1.0.0 - 2020/09**
 
 - Provided initial core base
-
-## Limitations and caveats
-
-DataQI does attempt to solve some problems. It is in the experimental phase.
 
 ## License
 
