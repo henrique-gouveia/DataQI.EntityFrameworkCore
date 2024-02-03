@@ -10,7 +10,7 @@ using DataQI.EntityFrameworkCore.Test.Repository.Products;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository
 {
-    public class EntityRepositoryQueryMethodTest : IClassFixture<DbFixture>, IDisposable
+    public sealed class EntityRepositoryQueryMethodTest : IClassFixture<DbFixture>, IDisposable
     {
         private readonly TestContext productContext;
 
@@ -61,7 +61,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             var productList = InsertTestProductsList();
 
             var departments = productList.Select(p => p.Department);
-            var productEnumerator = productList.GetEnumerator();
+            using var productEnumerator = productList.GetEnumerator();
 
             while (productEnumerator.MoveNext())
             {
@@ -81,7 +81,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         public void TestFindByKeywordsLikeAndActive()
         {
             var productList = InsertTestProductsList();
-            var productEnumerator = productList.GetEnumerator();
+            using var productEnumerator = productList.GetEnumerator();
 
             while (productEnumerator.MoveNext())
             {
@@ -96,13 +96,13 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 
         private IEnumerator<Product> InsertTestProducts()
         {
-            var Products = InsertTestProductsList();
-            return Products.GetEnumerator();
+            var products = InsertTestProductsList();
+            return products.GetEnumerator();
         }
 
         private IList<Product> InsertTestProductsList()
         {
-            var Products = new List<Product>()
+            var products = new List<Product>()
             {
                 ProductBuilder.NewInstance().Build(),
                 ProductBuilder.NewInstance().Build(),
@@ -111,7 +111,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
                 ProductBuilder.NewInstance().Build(),
             };
 
-            Products.ForEach(p =>
+            products.ForEach(p =>
             {
                 productRepository.Save(p);
                 productContext.SaveChanges();
@@ -119,13 +119,13 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
                 Assert.True(productRepository.Exists(p.Id));
             });
 
-            return Products;
+            return products;
         }
 
         #region IDisposable Support
         private bool disposedValue = false;
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

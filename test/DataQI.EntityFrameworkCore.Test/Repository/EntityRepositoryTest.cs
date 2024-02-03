@@ -17,7 +17,7 @@ using DataQI.EntityFrameworkCore.Repository.Support;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository
 {
-    public class EntityRepositoryTest : IClassFixture<DbFixture>, IDisposable
+    public sealed class EntityRepositoryTest : IClassFixture<DbFixture>, IDisposable
     {
         private readonly TestContext customerContext;
         private readonly IEntityRepository<Customer, int> customerRepository;
@@ -258,7 +258,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         #region IDisposable Support
         private bool disposedValue = false;
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposedValue)
             {

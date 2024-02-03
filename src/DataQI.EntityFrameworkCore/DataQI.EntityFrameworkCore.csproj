@@ -2,14 +2,14 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <Version>3.0.0</Version>
+    <Version>3.1.0</Version>
     <Authors>Henrique Gouveia</Authors>
     <Description>Data Query Interface it's EntityFrameworkCore provider that use infraestructure provided by DataQI.Commons and it turns your Data Repositories a live interface.</Description>
     <Copyright>(c) Henrique Gouveia</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>Data Query Interface Provider for EntityFramework Core</PackageTags>
+    <PackageTags>EntityFramework Core Repository Interface Pattern</PackageTags>
     <PackageProjectUrl>https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore</PackageProjectUrl>
     <Product />
   </PropertyGroup>
