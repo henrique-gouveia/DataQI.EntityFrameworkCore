@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,8 +16,8 @@ using DataQI.EntityFrameworkCore.Query.Support;
 
 namespace DataQI.EntityFrameworkCore.Repository.Support
 {
-    public class EntityRepository<TEntity, TId> : IEntityRepository<TEntity, TId>
-        where TEntity : class
+    public class EntityRepository<TEntity, TId> :
+        IEntityRepository<TEntity, TId> where TEntity : class
     {
         protected DbContext context;
 
@@ -52,6 +53,51 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             Assert.NotNull(id, "Id must not be null");
             var entity = await FindOneAsync(id, cancellationToken);
             return entity != null;
+        }
+        
+        public IQueryable<TEntity> Find() => context.Set<TEntity>().AsQueryable();
+
+        public IEnumerable<TEntity> Find(Expression<Func<TEntity, bool>> predicate)
+        {
+            Assert.NotNull(predicate, "Predicate must not be null");
+            var entities = context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .Where(predicate)
+                .ToList();
+            return entities;
+        }
+
+        public async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.NotNull(predicate, "Predicate must not be null");
+            var entities = await context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .Where(predicate)
+                .ToListAsync(cancellationToken);
+            return entities;
+        }
+
+        public IEnumerable<TEntity> Find(Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder)
+        {
+            Assert.NotNull(queryBuilder, "QueryBuilder must not be null");
+            var query = context.Set<TEntity>().AsQueryable();
+            query = queryBuilder(query);
+            var entities = query.ToList();
+            return entities;
+        }
+        
+                
+        public async Task<IEnumerable<TEntity>> FindAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.NotNull(queryBuilder, "QueryBuilder must not be null");
+            var query = context.Set<TEntity>().AsQueryable();
+            query = queryBuilder(query);
+            var entities = await query.ToListAsync(cancellationToken);
+            return entities;
         }
 
         public IEnumerable<TEntity> Find(Func<ICriteria, ICriteria> criteriaBuilder)
