@@ -235,6 +235,40 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
+        public void TestFindByQueryBuilder(bool useAsyncMethod)
+        {
+            var customersList = InsertTestCustomersList();
+            using var customersEnumerator = customersList.GetEnumerator();
+        
+            while (customersEnumerator.MoveNext())
+            {
+                var customer = customersEnumerator.Current;
+                var customerEmailDomain = customer?.Email.Split('@')[1] ?? "";
+                var customerActive = customer?.Active;
+                var customersExpected = customersList
+                    .Where(c => 
+                        c.Email.EndsWith(customerEmailDomain)
+                        && c.Active == customerActive)
+                    .ToList();
+        
+                Func<IQueryable<Customer>, IQueryable<Customer>> queryBuilder = query =>
+                    query.Where(c => 
+                        c.Email.EndsWith(customerEmailDomain)
+                        && c.Active == customerActive);
+                
+                IEnumerable<Customer> customers;
+                if (useAsyncMethod)
+                    customers = customerRepository.FindAsync(queryBuilder).Result;
+                else
+                    customers = customerRepository.Find(queryBuilder);
+                
+                customersExpected.ToExpectedObject().ShouldMatch(customers);
+            }
+        }
+        
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
         public async Task TestFindRejectsNullCriteria(bool useAsyncMethod)
         {
             try
@@ -277,40 +311,6 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
                 else
                     customers = customerRepository.Find(criteriaBuilder);
 
-                customersExpected.ToExpectedObject().ShouldMatch(customers);
-            }
-        }
-        
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void TestFindByQueryBuilder(bool useAsyncMethod)
-        {
-            var customersList = InsertTestCustomersList();
-            using var customersEnumerator = customersList.GetEnumerator();
-        
-            while (customersEnumerator.MoveNext())
-            {
-                var customer = customersEnumerator.Current;
-                var customerEmailDomain = customer?.Email.Split('@')[1] ?? "";
-                var customerActive = customer?.Active;
-                var customersExpected = customersList
-                    .Where(c => 
-                        c.Email.EndsWith(customerEmailDomain)
-                        && c.Active == customerActive)
-                    .ToList();
-        
-                Func<IQueryable<Customer>, IQueryable<Customer>> queryBuilder = query =>
-                    query.Where(c => 
-                        c.Email.EndsWith(customerEmailDomain)
-                        && c.Active == customerActive);
-                
-                IEnumerable<Customer> customers;
-                if (useAsyncMethod)
-                    customers = customerRepository.FindAsync(queryBuilder).Result;
-                else
-                    customers = customerRepository.Find(queryBuilder);
-                
                 customersExpected.ToExpectedObject().ShouldMatch(customers);
             }
         }
@@ -420,14 +420,6 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             });
 
             return customers;
-        }
-
-        public class CustomerDto
-        {
-            public string Name { get; set; }
-            public string Doc { get; set; }
-            public string Email { get; set; }
-            public string Phone { get; set; }
         }
 
         #region IDisposable Support

@@ -42,15 +42,12 @@ public class Person
     public boolean Active { get; set; }
 }
 
-public interface IPersonRepository : IEntityRepository<Person, int>
-{
-
-}
+public interface IPersonRepository : IEntityRepository<Person, int> { }
 ```
 
 ### Instancing a Repository
 
-Should to use a instance of the `EntityRepositoryFactory` class to instantiate a Repository, localizated in the namespace `DataQI.EntityFrameworkCore.Repository.Support`, that requires a `DbContext` to make its calls:
+You must use a instance of the `EntityRepositoryFactory` class to instantiate a Repository, located in the `DataQI.EntityFrameworkCore.Repository.Support` namespace, which requires a `DbContext` to make its calls:
 
 ```csharp
 DbContext dbContext = CreateDbContext();
@@ -101,6 +98,17 @@ Take a look at the [Samples](https://github.com/henrique-gouveia/DataQI.EntityFr
 
 A Repository Interface that extends `IEntityRepository<TEntity>` inherit its standard operations:
 
+| **Operation** | **Methods**
+|-------------|------------
+| **Delete** | Delete, DeleteAsync
+| **Exists** | Exists, ExistsAsync
+| **Find Single** | FindOne, FindOneAsync
+| **Find Many** | Find, FindAsync, FindAll, FindAllAsync
+| **Insert** | Insert, InsertAsync
+| **Insert** or **Update** | Save, SaveAsync
+
+#### Sample
+
 ```csharp
 personRepository.Insert(person);
 await personRepository.InsertAsync(person);
@@ -119,30 +127,6 @@ allPersons = await personRepository.FindAllAsync();
 
 var onePerson = personRepository.FindOne(1);
 onePerson = await personRepository.FindOneAsync(1);
-```
-
-### Using Criteria Definitions
-
-Customized Queries can be specified by a simple Criteria Query API where are the main artifacts is localized in the namespace `DataQI.Common.Query` and `DataQI.Common.Query.Support`.
-
-```csharp
-var personsByCriteria = personRepository.Find(criteria =>
-    criteria
-        .Add(Restrictions.Like("FirstName", "Name%"))
-        .Add(Restrictions
-            .Disjuction()
-            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
-            .Add(Restrictions.Equal("Active", true)))
-    );
-
-var personsByCriteriaAsync = await personRepository.FindAsync(criteria =>
-    criteria
-        .Add(Restrictions.Like("LastName", "%Name%"))
-        .Add(Restrictions
-            .Disjuction()
-            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
-            .Add(Restrictions.GreaterThan("RegisterDate", new DateTime(2019, 1, 1))))
-    );
 ```
 
 ### Using Query Methods
@@ -203,6 +187,84 @@ persons = personRepository.FindByBirthDateBetween(new DateTime(2015, 1, 1), new 
 persons = personRepository.FindByFirstNameLikeAndActive(string name, bool active = true);
 persons = personRepository.FindByEmailLikeOrPhoneNotNull(string email);
 persons = personRepository.FindFindByFirstNameAndLastNameOrBirthDateGreaterThan("A First Name", "A Last Name", new DateTime(2019, 1, 1));
+```
+
+### Using Linq Query Builder
+
+Customized Queries can be specified by using the linq functionality to evaluate queries against the data source.
+
+```csharp
+var persons = personRepository.Find()
+    .Where(p => p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    .FirstOrDefault();
+
+var persons = personRepository.Find(query => query
+    .Where(p => p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    .Skip(0)
+    .Take(20));
+
+var persons = await personRepository.FindAsync(query => query
+    .Where(p => p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    .Skip(0)
+    .Take(20));
+```
+
+### Using Linq Expression Builder
+
+Customized Queries can be specified by using the a strongly typed lambda expression to build predicates.
+
+```csharp
+var persons = personRepository.Find(p => 
+        p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    );
+
+var persons = await personRepository.FindAsync(p => 
+        p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    );
+```
+
+### Using Criteria Definitions
+
+Customized Queries can be specified by a simple Criteria Query API where are the main artifacts is localized in the namespace `DataQI.Common.Query` and `DataQI.Common.Query.Support`.
+
+```csharp
+var personsByCriteria = personRepository.Find(criteria =>
+    criteria
+        .Add(Restrictions.Like("FirstName", "%Name%"))
+        .Add(Restrictions
+            .Disjuction()
+            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
+            .Add(Restrictions.Equal("Active", true)))
+    );
+
+var personsByCriteriaAsync = await personRepository.FindAsync(criteria =>
+    criteria
+        .Add(Restrictions.Like("LastName", "%Name%"))
+        .Add(Restrictions
+            .Disjuction()
+            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
+            .Add(Restrictions.GreaterThan("RegisterDate", new DateTime(2019, 1, 1))))
+    );
 ```
 
 ### Using Customized Methods
@@ -293,6 +355,11 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 The DataQI EntityFrameworkCore Provider library is not an ORM or it attempts to solve all data persistence problems. It provides a structure based on Repository Pattern that facilitates the rapid creation of repositories with methods that allow the creation, modification and deletion of data, as well as the preparation of simple queries by signing the methods declared in an interface, in order to avoid most of the effort involved in writing standard code in projects that use the [EntityFrameworkCore](https://github.com/dotnet/efcore) library.
 
 ## Release Notes
+
+**v4.0.0 - 2024/12**
+
+- New! Added support to perform queries by using linq query and expression builders
+- Change! Upgraded version of `DataQI.Commons` to the `2.0.0` to support new features
 
 **v3.1.0 - 2023/01**
 

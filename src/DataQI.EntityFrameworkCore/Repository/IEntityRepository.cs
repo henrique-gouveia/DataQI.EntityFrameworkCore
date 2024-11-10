@@ -9,7 +9,7 @@ using DataQI.Commons.Repository;
 
 namespace DataQI.EntityFrameworkCore.Repository
 {
-    public interface IEntityRepository<TEntity, TId> :
+    public interface IEntityRepository<TEntity, in TId> :
         ICrudRepository<TEntity, TId> where TEntity : class
     {
         IQueryable<TEntity> Find();
