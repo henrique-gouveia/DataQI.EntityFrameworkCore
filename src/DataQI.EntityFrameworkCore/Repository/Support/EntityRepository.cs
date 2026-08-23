@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Dynamic.Core;
+using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
@@ -14,8 +16,8 @@ using DataQI.EntityFrameworkCore.Query.Support;
 
 namespace DataQI.EntityFrameworkCore.Repository.Support
 {
-    public class EntityRepository<TEntity, TId> : IEntityRepository<TEntity, TId>
-        where TEntity : class
+    public class EntityRepository<TEntity, TId> :
+        IEntityRepository<TEntity, TId> where TEntity : class
     {
         protected DbContext context;
 
@@ -28,68 +30,102 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         public void Delete(TId id)
         {
             Assert.NotNull(id, "Entity Id must not be null");
-            
             var entity = FindOne(id);
             context.Remove(entity);
         }
 
-        public async Task DeleteAsync(TId id)
+        public async Task DeleteAsync(TId id, CancellationToken cancellationToken = default)
         {
             Assert.NotNull(id, "Entity Id must not be null");
-
-            var entity = await FindOneAsync(id);
+            var entity = await FindOneAsync(id, cancellationToken);
             await Task.FromResult(context.Remove(entity));
         }
 
         public bool Exists(TId id)
         {
             Assert.NotNull(id, "Id must not be null");
-
             var entity = FindOne(id);
             return entity != null;
         }
 
-        public async Task<bool> ExistsAsync(TId id)
+        public async Task<bool> ExistsAsync(TId id, CancellationToken cancellationToken = default)
         {
             Assert.NotNull(id, "Id must not be null");
-
-            var entity = await FindOneAsync(id);
+            var entity = await FindOneAsync(id, cancellationToken);
             return entity != null;
+        }
+        
+        public IQueryable<TEntity> Find() => context.Set<TEntity>().AsQueryable();
+
+        public IEnumerable<TEntity> Find(Expression<Func<TEntity, bool>> predicate)
+        {
+            Assert.NotNull(predicate, "Predicate must not be null");
+            var entities = context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .Where(predicate)
+                .ToList();
+            return entities;
+        }
+
+        public async Task<IEnumerable<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.NotNull(predicate, "Predicate must not be null");
+            var entities = await context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .Where(predicate)
+                .ToListAsync(cancellationToken);
+            return entities;
+        }
+
+        public IEnumerable<TEntity> Find(Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder)
+        {
+            Assert.NotNull(queryBuilder, "QueryBuilder must not be null");
+            var query = context.Set<TEntity>().AsQueryable();
+            query = queryBuilder(query);
+            var entities = query.ToList();
+            return entities;
+        }
+        
+                
+        public async Task<IEnumerable<TEntity>> FindAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> queryBuilder,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.NotNull(queryBuilder, "QueryBuilder must not be null");
+            var query = context.Set<TEntity>().AsQueryable();
+            query = queryBuilder(query);
+            var entities = await query.ToListAsync(cancellationToken);
+            return entities;
         }
 
         public IEnumerable<TEntity> Find(Func<ICriteria, ICriteria> criteriaBuilder)
         {
             Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
-
             var criteria = new EntityCriteria();
             criteriaBuilder(criteria);
-
             var entityCommand = criteria.BuildCommand();
-
             var entities = context
                 .Set<TEntity>()
-                .Where(entityCommand.Command, entityCommand.Values)
                 .AsNoTracking()
+                .Where(entityCommand.Command, entityCommand.Values)
                 .ToList();
-
             return entities;
         }
 
-        public async Task<IEnumerable<TEntity>> FindAsync(Func<ICriteria, ICriteria> criteriaBuilder)
+        public async Task<IEnumerable<TEntity>> FindAsync(Func<ICriteria, ICriteria> criteriaBuilder,
+            CancellationToken cancellationToken = default)
         {
             Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
-
             var criteria = new EntityCriteria();
             criteriaBuilder(criteria);
-
             var entityCommand = criteria.BuildCommand();
-
             var entities = await context
                 .Set<TEntity>()
-                .Where(entityCommand.Command, entityCommand.Values)
                 .AsNoTracking()
-                .ToListAsync();
-
+                .Where(entityCommand.Command, entityCommand.Values)
+                .ToListAsync(cancellationToken);
             return entities;
         }
 
@@ -99,32 +135,30 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
                 .Set<TEntity>()
                 .AsNoTracking()
                 .ToList();
-
             return entities;
         }
 
-        public async Task<IEnumerable<TEntity>> FindAllAsync()
+        public async Task<IEnumerable<TEntity>> FindAllAsync(CancellationToken cancellationToken = default)
         {
             var entities = await context
                 .Set<TEntity>()
                 .AsNoTracking()
-                .ToListAsync();
-
+                .ToListAsync(cancellationToken);
             return entities;
         }
 
         public TEntity FindOne(TId id)
         {
             Assert.NotNull(id, "Id must not be null");
-
             var entity = context.Find<TEntity>(id);
             return entity;
         }
-        public async Task<TEntity> FindOneAsync(TId id)
+        public async Task<TEntity> FindOneAsync(TId id, CancellationToken cancellationToken = default)
         {
             Assert.NotNull(id, "Id must not be null");
-
-            var entity = await context.FindAsync<TEntity>(id);
+            var entity = await context.FindAsync<TEntity>(
+                keyValues: new object[] { id }, 
+                cancellationToken: cancellationToken);
             return entity;
         }
 
@@ -134,10 +168,10 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             context.Add(entity);
         }
 
-        public async Task InsertAsync(TEntity entity)
+        public async Task InsertAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
             Assert.NotNull(entity, "Entity must not be null");
-            await context.AddAsync(entity);
+            await context.AddAsync(entity, cancellationToken);
         }
 
         public void Save(TEntity entity)
@@ -146,22 +180,20 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
 
             var entityId = context.KeyOf<TEntity, TId>(entity);
             var existingEntity = FindOne(entityId);
-
             if (existingEntity == null)
                 Insert(entity);
             else
                 ChangeExistingEntityValues(existingEntity, entity);
         }
 
-        public async Task SaveAsync(TEntity entity)
+        public async Task SaveAsync(TEntity entity, CancellationToken cancellationToken = default)
         {
             Assert.NotNull(entity, "Entity must not be null");
 
             var entityId = context.KeyOf<TEntity, TId>(entity);
-            var existingEntity = await FindOneAsync(entityId);
-           
+            var existingEntity = await FindOneAsync(entityId, cancellationToken);
             if (existingEntity == null)
-                await InsertAsync(entity);
+                await InsertAsync(entity, cancellationToken);
             else
                 ChangeExistingEntityValues(existingEntity, entity);
         }

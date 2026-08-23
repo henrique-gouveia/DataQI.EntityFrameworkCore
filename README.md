@@ -1,6 +1,6 @@
 # DataQI EntityFrameworkCore
 
-Data Query Interface Provider for [EntityFrameworkCore](https://github.com/dotnet/efcore) written in C# and built around essential features of the .NET Standard that use infraestructure provided by [DataQI.Commons](https://github.com/henrique-gouveia/DataQI.Commons) and it turns your Data Repositories a live interface. Its purpose is to facilitate the construction of data access layers and makes possible the definition repository interfaces, providing behaviors for standard operations as well to defines customized queries through method signatures.
+Data Query Interface Provider for [EntityFrameworkCore](https://github.com/dotnet/efcore) written in C# and built around essential features of the .NET Standard that use infrastructure provided by [DataQI.Commons](https://github.com/henrique-gouveia/DataQI.Commons) and it turns your Data Repositories a live interface. Its purpose is to facilitate the construction of data access layers and make possible the definition of repository interfaces, providing behaviors for standard operations as well as to define customized queries through method signatures.
 
 [![Build](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml/badge.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml)
 [![codecov](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore/branch/main/graph/badge.svg)](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore)
@@ -11,7 +11,7 @@ Data Query Interface Provider for [EntityFrameworkCore](https://github.com/dotne
 
 ### Installing
 
-This library can add in to the project by way:
+This library can add in to the project by the way:
 
     dotnet add package DataQI.EntityFrameworkCore
 
@@ -19,7 +19,7 @@ See [Nuget](https://www.nuget.org/packages/DataQI.EntityFrameworkCore) for other
 
 ### Defining a Repository
 
-A Repository Interface should extends the interface `IEntityRepository<TEntity>` localized in the namespace `DataQI.EntityFrameworkCore.Repository`, where the `TEntity` is a _Plain Old CSharp Object (POCO)_ and `TId` is its key type.
+A Repository Interface should extend the interface `IEntityRepository<TEntity>` localized in the namespace `DataQI.EntityFrameworkCore.Repository`, where the `TEntity` is a _Plain Old CSharp Object (POCO)_ and `TId` is its key type.
 
 ```csharp
 [Table("Person")]
@@ -42,15 +42,12 @@ public class Person
     public boolean Active { get; set; }
 }
 
-public interface IPersonRepository : IEntityRepository<Person, int>
-{
-
-}
+public interface IPersonRepository : IEntityRepository<Person, int> { }
 ```
 
 ### Instancing a Repository
 
-Should to use a instance of the `EntityRepositoryFactory` class to instantiate a Repository, localizated in the namespace `DataQI.EntityFrameworkCore.Repository.Support`, that requires a `DbContext` to make its calls:
+You must use an instance of the `EntityRepositoryFactory` class to instantiate a Repository, located in the `DataQI.EntityFrameworkCore.Repository.Support` namespace, which requires a `DbContext` to make its calls:
 
 ```csharp
 DbContext dbContext = CreateDbContext();
@@ -101,6 +98,17 @@ Take a look at the [Samples](https://github.com/henrique-gouveia/DataQI.EntityFr
 
 A Repository Interface that extends `IEntityRepository<TEntity>` inherit its standard operations:
 
+| **Operation**            | **Methods**                            |
+|--------------------------|----------------------------------------|
+| **Delete**               | Delete, DeleteAsync                    |
+| **Exists**               | Exists, ExistsAsync                    |
+| **Find Single**          | FindOne, FindOneAsync                  |
+| **Find Many**            | Find, FindAsync, FindAll, FindAllAsync |
+| **Insert**               | Insert, InsertAsync                    |
+| **Insert** or **Update** | Save, SaveAsync                        |
+
+#### Sample
+
 ```csharp
 personRepository.Insert(person);
 await personRepository.InsertAsync(person);
@@ -121,65 +129,41 @@ var onePerson = personRepository.FindOne(1);
 onePerson = await personRepository.FindOneAsync(1);
 ```
 
-### Using Criteria Definitions
-
-Customized Queries can be specified by a simple Criteria Query API where are the main artifacts is localized in the namespace `DataQI.Common.Query` and `DataQI.Common.Query.Support`.
-
-```csharp
-var personsByCriteria = personRepository.Find(criteria =>
-    criteria
-        .Add(Restrictions.Like("FirstName", "Name%"))
-        .Add(Restrictions
-            .Disjuction()
-            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
-            .Add(Restrictions.Equal("Active", true)))
-    );
-
-var personsByCriteriaAsync = await personRepository.FindAsync(criteria =>
-    criteria
-        .Add(Restrictions.Like("LastName", "%Name%"))
-        .Add(Restrictions
-            .Disjuction()
-            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
-            .Add(Restrictions.GreaterThan("RegisterDate", new DateTime(2019, 1, 1))))
-    );
-```
-
 ### Using Query Methods
 
 Customized Queries can be defined through method signatures with the following conventions:
 
 - The method name can be initiated with the prefix `FindBy`.
-- Next step, should be indicated the field that will be want to apply a operator.
+- The next step should be indicated the field that will be want to apply an operator.
 - After the field name, should be indicated the operator (column `Operador` from the table below). The `Equal` is assumed how default operator if nothing it's indicate.
-- Finaly, each sentence composition can be combined with anothers through of the `Conjunctions` _AND_ and `Disjunction` _OR_.
+- Finally, each sentence composition can be combined with another through of the `Conjunctions` _AND_ and `Disjunction` _OR_.
 
 #### Supported keywords inside method names
 
-| **Keyword** | **Sample** | **Fragment**
-|-------------|------------|-------------
-| **Equal** | FindByName, FindByName**Equal** | where Name **=** @0
-| **NotEqual** | FindByName**Not**, FindByName**NotEqual** | where Name **!=** @0
-| **Between** | FindByAge**Between** | where Age **>=** @0 **&&** Age **<=** @1
-| **NotBetween** | FindByAge**NotBetween** | where !(Age **>=** @0 **&&** Age **<=** @1)
-| **GreaterThan** | FindByBirthDate**GreaterThan** | where BirthDate **>** @0
-| **GreaterThanEqual** | FindByBirthDate**GreaterThanEqual** | where BirthDate **>=** @0
-| **LessThan** | FindByBirthDate**LessThan** | where BirthDate **<** @0
-| **LessThanEqual** | FindByBirthDate**LessThanEqual** | where BirthDate **<=** @0
-| **In** | FindByAddressType**In** | where **@0.Contains**(AddressType)
-| **NotIn** | FindByAddressType**NotIn** | where !**@0.Contains**(AddressType)
-| **Null** | FindByEmail**Null** | where Email **== null**
-| **NotNull** | FindByEmail**NotNull** | where Email **!= null**
-| **StartingWith** | FindByName**StartingWith** | where Name.**StartsWith(@0)**
-| **NotStartingWith** | FindByName**NotStartingWith** | where !Name.**StartsWith(@0)**
-| **EndingWith** | FindByName**EndingWith** | where Name.**EndsWith(@0)**
-| **NotEndingWith** | FindByName**NotEndingWith** | where !Name.**EndsWith(@0)**
-| **Containing** | FindByName**Containing** | where Name.**Contains(@0)**
-| **NotContaining** | FindByName**NotContaining** | where !Name.**Contains(@0)**
-| **Like** | FindByName**Like** | where Name.**Contains(@0)**
-| **NotLike** | FindByName**NotLike** | where !Name.**Contains(@0)**
-| **And** | FindByName**And**Email | where (Name = @0 **&&** Email = @1)
-| **Or** | FindByName**Or**Email | where (Name = @0 **\|\|** Email = @1)
+| **Keyword**          | **Sample**                                | **Fragment**                                |
+|----------------------|-------------------------------------------|---------------------------------------------|
+| **Equal**            | FindByName, FindByName**Equal**           | where Name **=** @0                         |
+| **NotEqual**         | FindByName**Not**, FindByName**NotEqual** | where Name **!=** @0                        |
+| **Between**          | FindByAge**Between**                      | where Age **>=** @0 **&&** Age **<=** @1    |
+| **NotBetween**       | FindByAge**NotBetween**                   | where !(Age **>=** @0 **&&** Age **<=** @1) |
+| **GreaterThan**      | FindByBirthDate**GreaterThan**            | where BirthDate **>** @0                    |
+| **GreaterThanEqual** | FindByBirthDate**GreaterThanEqual**       | where BirthDate **>=** @0                   |
+| **LessThan**         | FindByBirthDate**LessThan**               | where BirthDate **<** @0                    |
+| **LessThanEqual**    | FindByBirthDate**LessThanEqual**          | where BirthDate **<=** @0                   |
+| **In**               | FindByAddressType**In**                   | where **@0.Contains**(AddressType)          |
+| **NotIn**            | FindByAddressType**NotIn**                | where !**@0.Contains**(AddressType)         |
+| **Null**             | FindByEmail**Null**                       | where Email **== null**                     |
+| **NotNull**          | FindByEmail**NotNull**                    | where Email **!= null**                     |
+| **StartingWith**     | FindByName**StartingWith**                | where Name.**StartsWith(@0)**               |
+| **NotStartingWith**  | FindByName**NotStartingWith**             | where !Name.**StartsWith(@0)**              |
+| **EndingWith**       | FindByName**EndingWith**                  | where Name.**EndsWith(@0)**                 |
+| **NotEndingWith**    | FindByName**NotEndingWith**               | where !Name.**EndsWith(@0)**                |
+| **Containing**       | FindByName**Containing**                  | where Name.**Contains(@0)**                 |
+| **NotContaining**    | FindByName**NotContaining**               | where !Name.**Contains(@0)**                |
+| **Like**             | FindByName**Like**                        | where Name.**Contains(@0)**                 |
+| **NotLike**          | FindByName**NotLike**                     | where !Name.**Contains(@0)**                |
+| **And**              | FindByName**And**Email                    | where (Name = @0 **&&** Email = @1)         |
+| **Or**               | FindByName**Or**Email                     | where (Name = @0 **\|\|** Email = @1)       |
 
 #### Sample
 
@@ -203,6 +187,84 @@ persons = personRepository.FindByBirthDateBetween(new DateTime(2015, 1, 1), new 
 persons = personRepository.FindByFirstNameLikeAndActive(string name, bool active = true);
 persons = personRepository.FindByEmailLikeOrPhoneNotNull(string email);
 persons = personRepository.FindFindByFirstNameAndLastNameOrBirthDateGreaterThan("A First Name", "A Last Name", new DateTime(2019, 1, 1));
+```
+
+### Using Linq Query Builder
+
+Customized Queries can be specified by using the linq functionality to evaluate queries against the data source.
+
+```csharp
+var persons = personRepository.Find()
+    .Where(p => p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    .FirstOrDefault();
+
+var persons = personRepository.Find(query => query
+    .Where(p => p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    .Skip(0)
+    .Take(20));
+
+var persons = await personRepository.FindAsync(query => query
+    .Where(p => p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    .Skip(0)
+    .Take(20));
+```
+
+### Using Linq Expression Builder
+
+Customized Queries can be specified by using a strongly typed lambda expression to build predicates.
+
+```csharp
+var persons = personRepository.Find(p => 
+        p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    );
+
+var persons = await personRepository.FindAsync(p => 
+        p.FirstName.Contains("Name") 
+        && (
+            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
+            || p.RegisterDate > new DateTime(2019, 1, 1)
+        )
+    );
+```
+
+### Using Criteria Definitions
+
+Customized Queries can be specified by a simple Criteria Query API where the main artifacts are localized in the namespace `DataQI.Common.Query` and `DataQI.Common.Query.Support`.
+
+```csharp
+var personsByCriteria = personRepository.Find(criteria =>
+    criteria
+        .Add(Restrictions.Like("FirstName", "%Name%"))
+        .Add(Restrictions
+            .Disjuction()
+            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
+            .Add(Restrictions.Equal("Active", true)))
+    );
+
+var personsByCriteriaAsync = await personRepository.FindAsync(criteria =>
+    criteria
+        .Add(Restrictions.Like("LastName", "%Name%"))
+        .Add(Restrictions
+            .Disjuction()
+            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
+            .Add(Restrictions.GreaterThan("RegisterDate", new DateTime(2019, 1, 1))))
+    );
 ```
 
 ### Using Customized Methods
@@ -273,26 +335,31 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 
 ```
 
-| Lib         | Method               | Note                     | Op Count  | Mean      | StdDev    | Error     | Gen0      | Gen1     | Gen2     | Allocated  |
-|-------------|----------------------|------------------------- | ---------:|----------:|----------:|----------:|----------:|---------:|---------:|-----------:|
-| Pure EfCore | FindAll&lt;T&gt;     | Select ~10,000 rows / op |    10,000 | 23.180 ms | 2.5252 ms | 2.1928 ms |  738.0000 | 278.0000 | 118.0000 | 3872.01 KB |
-| DataQI      | FindAll&lt;T&gt;     | Select ~10,000 rows / op |    10,000 | 23.538 ms | 3.4966 ms | 3.0363 ms |  742.0000 | 272.0000 | 108.0000 | 3954.12 KB |
-| Pure EfCore | FindOne&lt;T&gt;     | Select 1 row / op        |    10,000 |  1.161 ms | 0.3173 ms | 0.2755 ms |    2.0000 |        - |        - |   13.93 KB |
-| DataQI      | FindOne&lt;T&gt;     | Select 1 row / op        |    10,000 |  1.168 ms | 0.3198 ms | 0.2777 ms |    2.0000 |        - |        - |   13.98 KB |
-| Pure EfCore | CustomQuery&lt;T&gt; | Select 1 row / op        |    10,000 | 10.372 ms | 0.5653 ms | 0.4909 ms |    2.0000 |        - |        - |   13.34 KB |
-| DataQI      | CustomQuery&lt;T&gt; | Select 1 row / op        |    10,000 | 12.232 ms | 0.4576 ms | 0.3973 ms |   18.0000 |   2.0000 |        - |  112.02 KB |
-| Pure EfCore | Insert&lt;T&gt;      | Insert 1 row / op        |    10,000 | 15.053 ms | 4.9835 ms | 4.3275 ms | 1886.0000 |   4.0000 |        - | 7704.21 KB |
-| DataQI      | Insert&lt;T&gt;      | Insert 1 row / op        |    10,000 | 15.220 ms | 5.4845 ms | 4.7625 ms | 1886.0000 |   4.0000 |        - | 7704.29 KB |
-| Pure EfCore | Update&lt;T&gt;      | Update 1 row / op        |    10,000 | 13.906 ms | 3.5626 ms | 3.0936 ms | 1884.0000 |   4.0000 |        - | 7700.69 KB |
-| DataQI      | Update&lt;T&gt;      | Update 1 row / op        |    10,000 | 16.803 ms | 4.8685 ms | 4.2276 ms | 1888.0000 |   6.0000 |        - | 7715.53 KB |
-| Pure EfCore | Delete&lt;T&gt;      | Delete 1 row / op        |    10,000 |  9.193 ms | 3.7906 ms | 3.2916 ms |    6.0000 |        - |        - |   25.34 KB |
-| DataQI      | Delete&lt;T&gt;      | Delete 1 row / op        |    10,000 |  9.195 ms | 0.4882 ms | 0.4239 ms |    6.0000 |        - |        - |   24.54 KB |
+| Lib         | Method               | Note                     | Op Count |      Mean |    StdDev |     Error |      Gen0 |     Gen1 |     Gen2 |  Allocated |
+|-------------|----------------------|--------------------------|---------:|----------:|----------:|----------:|----------:|---------:|---------:|-----------:|
+| Pure EfCore | FindAll&lt;T&gt;     | Select ~10,000 rows / op |   10,000 | 23.180 ms | 2.5252 ms | 2.1928 ms |  738.0000 | 278.0000 | 118.0000 | 3872.01 KB |
+| DataQI      | FindAll&lt;T&gt;     | Select ~10,000 rows / op |   10,000 | 23.538 ms | 3.4966 ms | 3.0363 ms |  742.0000 | 272.0000 | 108.0000 | 3954.12 KB |
+| Pure EfCore | FindOne&lt;T&gt;     | Select 1 row / op        |   10,000 |  1.161 ms | 0.3173 ms | 0.2755 ms |    2.0000 |        - |        - |   13.93 KB |
+| DataQI      | FindOne&lt;T&gt;     | Select 1 row / op        |   10,000 |  1.168 ms | 0.3198 ms | 0.2777 ms |    2.0000 |        - |        - |   13.98 KB |
+| Pure EfCore | CustomQuery&lt;T&gt; | Select 1 row / op        |   10,000 | 10.372 ms | 0.5653 ms | 0.4909 ms |    2.0000 |        - |        - |   13.34 KB |
+| DataQI      | CustomQuery&lt;T&gt; | Select 1 row / op        |   10,000 | 12.232 ms | 0.4576 ms | 0.3973 ms |   18.0000 |   2.0000 |        - |  112.02 KB |
+| Pure EfCore | Insert&lt;T&gt;      | Insert 1 row / op        |   10,000 | 15.053 ms | 4.9835 ms | 4.3275 ms | 1886.0000 |   4.0000 |        - | 7704.21 KB |
+| DataQI      | Insert&lt;T&gt;      | Insert 1 row / op        |   10,000 | 15.220 ms | 5.4845 ms | 4.7625 ms | 1886.0000 |   4.0000 |        - | 7704.29 KB |
+| Pure EfCore | Update&lt;T&gt;      | Update 1 row / op        |   10,000 | 13.906 ms | 3.5626 ms | 3.0936 ms | 1884.0000 |   4.0000 |        - | 7700.69 KB |
+| DataQI      | Update&lt;T&gt;      | Update 1 row / op        |   10,000 | 16.803 ms | 4.8685 ms | 4.2276 ms | 1888.0000 |   6.0000 |        - | 7715.53 KB |
+| Pure EfCore | Delete&lt;T&gt;      | Delete 1 row / op        |   10,000 |  9.193 ms | 3.7906 ms | 3.2916 ms |    6.0000 |        - |        - |   25.34 KB |
+| DataQI      | Delete&lt;T&gt;      | Delete 1 row / op        |   10,000 |  9.195 ms | 0.4882 ms | 0.4239 ms |    6.0000 |        - |        - |   24.54 KB |
 
 ## Limitations and caveats
 
-The DataQI EntityFrameworkCore Provider library is not an ORM or it attempts to solve all data persistence problems. It provides a structure based on Repository Pattern that facilitates the rapid creation of repositories with methods that allow the creation, modification and deletion of data, as well as the preparation of simple queries by signing the methods declared in an interface, in order to avoid most of the effort involved in writing standard code in projects that use the [EntityFrameworkCore](https://github.com/dotnet/efcore) library.
+The DataQI EntityFrameworkCore Provider library is not an ORM, or it attempts to solve all data persistence problems. It provides a structure based on Repository Pattern that facilitates the rapid creation of repositories with methods that allow the creation, modification and deletion of data, as well as the preparation of simple queries by signing the methods declared in an interface, in order to avoid most of the effort involved in writing standard code in projects that use the [EntityFrameworkCore](https://github.com/dotnet/efcore) library.
 
 ## Release Notes
+
+**v4.0.0 - 2024/12**
+
+- New! Added support to perform queries by using linq query and expression builders
+- Change! Upgraded version of `DataQI.Commons` to the `2.0.0` to support new features
 
 **v3.1.0 - 2023/01**
 
@@ -320,7 +387,7 @@ The DataQI EntityFrameworkCore Provider library is not an ORM or it attempts to 
 **v1.1.0 - 2022/01**
 
 - New! Added support to the new `RepositoryFactory` features
-- New! Added capability to invokes non-standard methods defined on client
+- New! Added the ability to invoke non-standard methods defined on a client
 - Change! `TEntity` requirements on generic interface `IEntityRepository`
 - **Breaking Change!** Removed `DbContext` as argument on `EntityRepositoryFactory` constructor
 

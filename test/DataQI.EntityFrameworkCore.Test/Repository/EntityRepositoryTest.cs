@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -38,6 +40,26 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             Assert.IsType<ArgumentException>(baseException);
             Assert.Equal("DbContext must not be null", baseException.Message);
         }
+        
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task TestInsertRejectsNullEntity(bool useAsyncMethod)
+        {
+            try
+            {
+                if (useAsyncMethod)
+                    await customerRepository.InsertAsync(null);
+                else
+                    customerRepository.Insert(null);
+            }
+            catch (Exception e)
+            {
+                var baseException = e.GetBaseException();
+                Assert.IsType<ArgumentException>(baseException);
+                Assert.Equal("Entity must not be null", baseException.Message);
+            }
+        }
 
         [Theory]
         [InlineData(false)]
@@ -57,6 +79,26 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 
             Assert.True(customerExpected.Id > 0);
             Assert.Equal(countExpected, customerContext.Customers.CountAsync().Result);
+        }
+        
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task TestSaveRejectsNullEntity(bool useAsyncMethod)
+        {
+            try
+            {
+                if (useAsyncMethod)
+                    await customerRepository.SaveAsync(null);
+                else
+                    customerRepository.Save(null);
+            }
+            catch (Exception e)
+            {
+                var baseException = e.GetBaseException();
+                Assert.IsType<ArgumentException>(baseException);
+                Assert.Equal("Entity must not be null", baseException.Message);
+            }
         }
 
         [Theory]
@@ -95,7 +137,6 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         public void TestExistsReturnsTrue(bool useAsyncMethod)
         {
             var customersExpected = InsertTestCustomers();
-
             while (customersExpected.MoveNext())
             {
                 var customer = customersExpected.Current;
@@ -114,29 +155,157 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             var customerExists = ExistsCustomer(new Customer(), useAsyncMethod);
             Assert.False(customerExists);
         }
+        
+        [Fact]
+        public void TestFind()
+        {
+            var customersExpected = InsertTestCustomersList();
+            var customers = customerRepository.Find().ToList();
+            customersExpected.ToExpectedObject().ShouldMatch(customers);
+        }
+        
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task TestFindRejectsNullPredicate(bool useAsyncMethod)
+        {
+            try
+            {
+                Expression<Func<Customer, bool>> predicate = null;
+                if (useAsyncMethod)
+                    await customerRepository.FindAsync(predicate);
+                else
+                    customerRepository.Find(predicate);
+            }
+            catch (Exception e)
+            {
+                var baseException = e.GetBaseException();
+                Assert.IsType<ArgumentException>(baseException);
+                Assert.Equal("Predicate must not be null", baseException.Message);
+            }
+        }
 
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void TestFind(bool useAsyncMethod)
+        public void TestFindByPredicate(bool useAsyncMethod)
         {
             var customersList = InsertTestCustomersList();
-            var customersEnumerator = customersList.GetEnumerator();
-
+            using var customersEnumerator = customersList.GetEnumerator();
             while (customersEnumerator.MoveNext())
             {
                 var customer = customersEnumerator.Current;
-                var customerFullNameStartsWith = customer.FullName.Substring(0, 5);
+                var customersExpected = customersList
+                    .Where(c => c.Document == customer?.Document);
+
+                Expression<Func<Customer, bool>> predicate = c =>
+                    c.Document == customer.Document;
+
+                IEnumerable<Customer> customers;
+                if (useAsyncMethod)
+                    customers = customerRepository.FindAsync(predicate).Result;
+                else
+                    customers = customerRepository.Find(predicate);
+                
+                customersExpected.ToExpectedObject().ShouldMatch(customers);
+            }
+        }
+        
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task TestFindRejectsNullQueryBuilder(bool useAsyncMethod)
+        {
+            try
+            {
+                Func<IQueryable<Customer>, IQueryable<Customer>> query = null;
+                if (useAsyncMethod)
+                    await customerRepository.FindAsync(query);
+                else
+                    customerRepository.Find(query);
+            }
+            catch (Exception e)
+            {
+                var baseException = e.GetBaseException();
+                Assert.IsType<ArgumentException>(baseException);
+                Assert.Equal("QueryBuilder must not be null", baseException.Message);
+            }
+        }
+        
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TestFindByQueryBuilder(bool useAsyncMethod)
+        {
+            var customersList = InsertTestCustomersList();
+            using var customersEnumerator = customersList.GetEnumerator();
+        
+            while (customersEnumerator.MoveNext())
+            {
+                var customer = customersEnumerator.Current;
+                var customerEmailDomain = customer?.Email.Split('@')[1] ?? "";
+                var customerActive = customer?.Active;
+                var customersExpected = customersList
+                    .Where(c => 
+                        c.Email.EndsWith(customerEmailDomain)
+                        && c.Active == customerActive)
+                    .ToList();
+        
+                Func<IQueryable<Customer>, IQueryable<Customer>> queryBuilder = query =>
+                    query.Where(c => 
+                        c.Email.EndsWith(customerEmailDomain)
+                        && c.Active == customerActive);
+                
+                IEnumerable<Customer> customers;
+                if (useAsyncMethod)
+                    customers = customerRepository.FindAsync(queryBuilder).Result;
+                else
+                    customers = customerRepository.Find(queryBuilder);
+                
+                customersExpected.ToExpectedObject().ShouldMatch(customers);
+            }
+        }
+        
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task TestFindRejectsNullCriteria(bool useAsyncMethod)
+        {
+            try
+            {
+                Func<ICriteria, ICriteria> criteriaBuilder = null;
+                if (useAsyncMethod)
+                    await customerRepository.FindAsync(criteriaBuilder);
+                else
+                    customerRepository.Find(criteriaBuilder);
+            }
+            catch (Exception e)
+            {
+                var baseException = e.GetBaseException();
+                Assert.IsType<ArgumentException>(baseException);
+                Assert.Equal("CriteriaBuilder must not be null", baseException.Message);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TestFindByCriteria(bool useAsyncMethod)
+        {
+            var customersList = InsertTestCustomersList();
+            using var customersEnumerator = customersList.GetEnumerator();
+            while (customersEnumerator.MoveNext())
+            {
+                var customer = customersEnumerator.Current;
+                var customerFullNameStartsWith = customer?.FullName.Substring(0, 5);
+                var customersExpected = customersList
+                    .Where(c => c.FullName.StartsWith(customerFullNameStartsWith ?? ""))
+                    .ToList();
 
                 Func<ICriteria, ICriteria> criteriaBuilder = criteria =>
                     criteria.Add(Restrictions.StartingWith($"{nameof(Customer.FullName)}", customerFullNameStartsWith));
-
-                var customersExpected = customersList
-                    .Where(c => c.FullName.StartsWith(customerFullNameStartsWith))
-                    .ToList();
-
+                
                 IEnumerable<Customer> customers;
-
                 if (useAsyncMethod)
                     customers = customerRepository.FindAsync(criteriaBuilder).Result;
                 else
@@ -152,7 +321,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         public void TestFindAll(bool useAsyncMethod)
         {
             var customersExpected = InsertTestCustomersList();
-            IEnumerable<Customer> customers = null;
+            IEnumerable<Customer> customers;
 
             if (useAsyncMethod)
                 customers = customerRepository.FindAllAsync().Result;
@@ -168,7 +337,6 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         public void TestFindOneReturnsEntity(bool useAsyncMethod)
         {
             var customersExpected = InsertTestCustomers();
-
             while (customersExpected.MoveNext())
             {
                 var customerExpected = customersExpected.Current;
@@ -203,7 +371,6 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         public void TestDelete(bool useAsyncMethod)
         {
             var customers = InsertTestCustomers();
-
             while (customers.MoveNext())
             {
                 var customer = customers.Current;
@@ -226,7 +393,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             else
                 return customerRepository.Exists(customer.Id);
         }
-
+        
         private IEnumerator<Customer> InsertTestCustomers()
         {
             var customers = InsertTestCustomersList();
@@ -256,7 +423,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         }
 
         #region IDisposable Support
-        private bool disposedValue = false;
+        private bool disposedValue;
 
         private void Dispose(bool disposing)
         {
