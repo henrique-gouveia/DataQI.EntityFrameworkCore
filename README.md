@@ -213,10 +213,12 @@ public interface IPersonRepository : IEntityRepository<Person, int>
 {
     Person FindByEmail(string email);
     Task<Person> FindByEmailAsync(string email);
+    Task<Person> FindByEmailAsync(string email, CancellationToken cancellationToken);
 }
 
 var person = personRepository.FindByEmail("person@example.com");
 person = await personRepository.FindByEmailAsync("person@example.com");
+person = await personRepository.FindByEmailAsync("person@example.com", cancellationToken);
 ```
 
 ### Using Linq Query Builder
