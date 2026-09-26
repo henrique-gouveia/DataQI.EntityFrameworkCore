@@ -10,6 +10,10 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Products
     {
         IEnumerable<Product> FindByEanLike(string ean);
 
+        Product FindByEan(string ean);
+
+        Task<Product> FindByEanAsync(string ean);
+
         IEnumerable<Product> FindByIdOrEanOrReference(int id, string ean, string reference);
 
         IEnumerable<Product> FindByNameStartingWithAndStockGreaterThan(string name, decimal stock = 0);
