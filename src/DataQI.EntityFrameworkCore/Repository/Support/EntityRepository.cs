@@ -129,6 +129,35 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             return entities;
         }
 
+        public TEntity FindOne(Func<ICriteria, ICriteria> criteriaBuilder)
+        {
+            Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
+            var criteria = new EntityCriteria();
+            criteriaBuilder(criteria);
+            var entityCommand = criteria.BuildCommand();
+            var entity = context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .Where(entityCommand.Command, entityCommand.Values)
+                .SingleOrDefault();
+            return entity;
+        }
+
+        public async Task<TEntity> FindOneAsync(Func<ICriteria, ICriteria> criteriaBuilder,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
+            var criteria = new EntityCriteria();
+            criteriaBuilder(criteria);
+            var entityCommand = criteria.BuildCommand();
+            var entity = await context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .Where(entityCommand.Command, entityCommand.Values)
+                .SingleOrDefaultAsync(cancellationToken);
+            return entity;
+        }
+
         public IEnumerable<TEntity> FindAll()
         {
             var entities = context
