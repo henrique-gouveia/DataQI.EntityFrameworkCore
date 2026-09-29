@@ -394,10 +394,28 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
                 return customerRepository.Exists(customer.Id);
         }
         
-        private IEnumerator<Customer> InsertTestCustomers()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TestFindByCriteriaAppliesOrderByCorrectly(bool useAsyncMethod)
         {
-            var customers = InsertTestCustomersList();
-            return customers.GetEnumerator();
+            var customersList = InsertTestCustomersList();
+
+            Func<ICriteria, ICriteria> criteriaBuilder = criteria => criteria
+                .Add(Restrictions.Not(Restrictions.Null(nameof(Customer.FullName))))
+                .AddOrder(Order.Desc(nameof(Customer.FullName)));
+
+            var customersExpected = customersList
+                .OrderByDescending(c => c.FullName)
+                .ToList();
+
+            IEnumerable<Customer> customers;
+            if (useAsyncMethod)
+                customers = customerRepository.FindAsync(criteriaBuilder).Result;
+            else
+                customers = customerRepository.Find(criteriaBuilder);
+
+            customersExpected.ToExpectedObject().ShouldMatch(customers);
         }
 
         private IList<Customer> InsertTestCustomersList()

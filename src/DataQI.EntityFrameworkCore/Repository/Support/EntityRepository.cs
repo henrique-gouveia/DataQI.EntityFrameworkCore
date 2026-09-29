@@ -106,11 +106,13 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             var criteria = new EntityCriteria();
             criteriaBuilder(criteria);
             var entityCommand = criteria.BuildCommand();
-            var entities = context
+            var query = context
                 .Set<TEntity>()
                 .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values)
-                .ToList();
+                .Where(entityCommand.Command, entityCommand.Values);
+            if (entityCommand.OrderBy != null)
+                query = query.OrderBy(entityCommand.OrderBy);
+            var entities = query.ToList();
             return entities;
         }
 
@@ -121,11 +123,13 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             var criteria = new EntityCriteria();
             criteriaBuilder(criteria);
             var entityCommand = criteria.BuildCommand();
-            var entities = await context
+            var query = context
                 .Set<TEntity>()
                 .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values)
-                .ToListAsync(cancellationToken);
+                .Where(entityCommand.Command, entityCommand.Values);
+            if (entityCommand.OrderBy != null)
+                query = query.OrderBy(entityCommand.OrderBy);
+            var entities = await query.ToListAsync(cancellationToken);
             return entities;
         }
 
@@ -135,11 +139,13 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             var criteria = new EntityCriteria();
             criteriaBuilder(criteria);
             var entityCommand = criteria.BuildCommand();
-            var entity = context
+            var query = context
                 .Set<TEntity>()
                 .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values)
-                .SingleOrDefault();
+                .Where(entityCommand.Command, entityCommand.Values);
+            if (entityCommand.OrderBy != null)
+                query = query.OrderBy(entityCommand.OrderBy);
+            var entity = query.SingleOrDefault();
             return entity;
         }
 
@@ -150,11 +156,13 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             var criteria = new EntityCriteria();
             criteriaBuilder(criteria);
             var entityCommand = criteria.BuildCommand();
-            var entity = await context
+            var query = context
                 .Set<TEntity>()
                 .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values)
-                .SingleOrDefaultAsync(cancellationToken);
+                .Where(entityCommand.Command, entityCommand.Values);
+            if (entityCommand.OrderBy != null)
+                query = query.OrderBy(entityCommand.OrderBy);
+            var entity = await query.SingleOrDefaultAsync(cancellationToken);
             return entity;
         }
 
