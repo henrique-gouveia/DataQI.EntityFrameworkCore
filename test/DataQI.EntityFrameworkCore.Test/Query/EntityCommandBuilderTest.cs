@@ -99,7 +99,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query
             var findByParametersExpected = Parameters("Fake First Name", "Fake Last Name");
 
             var firstNameCriterion = Restrictions.Equal("FirstName", findByParametersExpected[0]);
-            var lastNameCriterion = Restrictions.Equal("LastName", findByParametersExpected[1]);    
+            var lastNameCriterion = Restrictions.Equal("LastName", findByParametersExpected[1]);
 
             var junction1 = Restrictions
                 .Disjunction()
@@ -115,5 +115,28 @@ namespace DataQI.EntityFrameworkCore.Test.Query
 
             AssertCommand("(FirstName == @0) && (LastName == @1)", findByParametersExpected, commandBuilder.Build());
         }
-    }
-}
+
+        [Fact]
+        public void TestBuildOrderByCorrectly()
+        {
+            commandBuilder
+                .AddOrder(Order.Asc("FirstName"))
+                .AddOrder(Order.Desc("LastName"));
+
+            var command = commandBuilder.Build();
+
+            Assert.Equal("FirstName ascending, LastName descending", command.OrderBy);
+        }
+
+        [Fact]
+        public void TestBuildWithoutOrderByLeavesOrderByNull()
+        {
+            var findByParametersExpected = Parameters("fake name");
+            var firstNameCriterion = Restrictions.Equal("FirstName", findByParametersExpected[0]);
+
+            commandBuilder.AddExpression(firstNameCriterion.GetExpressionBuilder());
+
+            var command = commandBuilder.Build();
+
+            Assert.Null(command.OrderBy);
+        }

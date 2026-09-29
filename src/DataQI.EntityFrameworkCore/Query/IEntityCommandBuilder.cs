@@ -1,3 +1,5 @@
+using DataQI.Commons.Query;
+
 namespace DataQI.EntityFrameworkCore.Query
 {
     public interface IEntityCommandBuilder
@@ -5,6 +7,8 @@ namespace DataQI.EntityFrameworkCore.Query
         IEntityCommandBuilder AddExpression(IEntityExpressionBuilder expression);
 
         string AddExpressionValue(object value);
+
+        IEntityCommandBuilder AddOrder(IOrderCriterion order);
 
         EntityCommand Build();
     }
