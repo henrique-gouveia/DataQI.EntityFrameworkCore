@@ -127,5 +127,15 @@ namespace DataQI.EntityFrameworkCore.Test.Query
 
             AssertCommand("(FirstName == @0) && (LastName == @1)", findByParametersExpected, command);
         }
-    }
-}
+
+        [Fact]
+        public void TestBuildCommandWithOrderByCorrectly()
+        {
+            criteria
+                .AddOrder(Order.Asc("FirstName"))
+                .AddOrder(Order.Desc("LastName"));
+
+            var command = criteria.BuildCommand();
+
+            Assert.Equal("FirstName ascending, LastName descending", command.OrderBy);
+        }
