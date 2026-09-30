@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
@@ -393,6 +394,12 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             else
                 return customerRepository.Exists(customer.Id);
         }
+
+        private IEnumerator<Customer> InsertTestCustomers()
+        {
+            var customers = InsertTestCustomersList();
+            return customers.GetEnumerator();
+        }
         
         [Theory]
         [InlineData(false)]
@@ -416,6 +423,28 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
                 customers = customerRepository.Find(criteriaBuilder);
 
             customersExpected.ToExpectedObject().ShouldMatch(customers);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task TestFindOneByCriteriaWithOrderingStillThrowsWhenMultipleMatches(bool useAsyncMethod)
+        {
+            InsertTestCustomersList();
+
+            Func<ICriteria, ICriteria> criteriaBuilder = criteria => criteria
+                .Add(Restrictions.Not(Restrictions.Null(nameof(Customer.FullName))))
+                .AddOrder(Order.Desc(nameof(Customer.FullName)));
+
+            if (useAsyncMethod)
+                await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                    await customerRepository.FindOneAsync(criteriaBuilder));
+            else
+            {
+                var exception = Assert.Throws<TargetInvocationException>(() =>
+                    customerRepository.FindOne(criteriaBuilder));
+                Assert.IsType<InvalidOperationException>(exception.GetBaseException());
+            }
         }
 
         private IList<Customer> InsertTestCustomersList()

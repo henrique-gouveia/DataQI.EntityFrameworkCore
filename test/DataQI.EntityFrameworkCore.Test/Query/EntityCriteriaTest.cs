@@ -139,3 +139,5 @@ namespace DataQI.EntityFrameworkCore.Test.Query
 
             Assert.Equal("FirstName ascending, LastName descending", command.OrderBy);
         }
+    }
+}

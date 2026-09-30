@@ -140,3 +140,5 @@ namespace DataQI.EntityFrameworkCore.Test.Query
 
             Assert.Null(command.OrderBy);
         }
+    }
+}
