@@ -2,22 +2,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using DataQI.Commons.Query;
+using DataQI.Commons.Query.Support;
+
 namespace DataQI.EntityFrameworkCore.Query.Support
 {
     public class EntityCommandBuilder : IEntityCommandBuilder
     {
         private readonly ICollection<IEntityExpressionBuilder> expressions;
+        private readonly ICollection<IOrderCriterion> orderCriterions;
         private readonly IDictionary<string, object> values;
 
         public EntityCommandBuilder()
         {
             this.expressions = new List<IEntityExpressionBuilder>();
+            this.orderCriterions = new List<IOrderCriterion>();
             this.values = new Dictionary<string, object>();
         }
 
         public IEntityCommandBuilder AddExpression(IEntityExpressionBuilder expression)
         {
             expressions.Add(expression);
+            return this;
+        }
+
+        public IEntityCommandBuilder AddOrder(IOrderCriterion order)
+        {
+            orderCriterions.Add(order);
             return this;
         }
 
@@ -48,7 +59,18 @@ namespace DataQI.EntityFrameworkCore.Query.Support
                 expressionBuilder.Append(expression.Build(this));
             }
 
-            return new EntityCommand(expressionBuilder.ToString(), values.Values.ToArray());
+            return new EntityCommand(expressionBuilder.ToString(), values.Values.ToArray(), BuildOrderBy());
+        }
+
+        private string BuildOrderBy()
+        {
+            if (orderCriterions.Count == 0)
+                return null;
+
+            var fragments = orderCriterions.Select(order =>
+                $"{order.GetPropertyName()} {(order.GetDirection() == OrderDirection.Asc ? "ascending" : "descending")}");
+
+            return string.Join(", ", fragments);
         }
     }
 }
