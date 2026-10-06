@@ -416,6 +416,13 @@ The DataQI EntityFrameworkCore Provider library is not an ORM, or it attempts to
 
 ## Release Notes
 
+**v5.0.0 - 2026/10**
+
+- New! Added support for async query methods
+- New! Added single-entity query methods and criteria-based `FindOne`/`FindOneAsync` methods
+- New! Added ordering through criteria and the `OrderBy` suffix in query method names
+- Change! Adopted the new `DataQI.Commons` APIs for async query methods, single-entity queries and ordering
+
 **v4.0.0 - 2024/12**
 
 - New! Added support to perform queries by using linq query and expression builders
