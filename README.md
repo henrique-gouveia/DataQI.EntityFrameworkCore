@@ -327,6 +327,10 @@ var personsByCriteriaAsync = await personRepository.FindAsync(criteria =>
     );
 ```
 
+## Criteria AST (6.0)
+
+`Find`/`FindAsync`/`FindOne`/`FindOneAsync` now turn criteria into an `Expression<Func<TEntity, bool>>` predicate that EF Core translates to SQL, instead of a Dynamic LINQ string, and apply ordering with `OrderBy`/`ThenBy` expressions. The public types of the old pipeline were removed: `EntityCriteria`, `EntityCommandBuilder`, `IEntityCommandBuilder`, `IEntityExpressionBuilder`, the `Entity*Expression` classes, `EntityCommand` and `EntityCriterionExtensions`. `Restrictions` and `Func<ICriteria, ICriteria>` usage is unchanged. `IsNull` on a non-nullable property now fails with a clear exception instead of silently matching nothing. See `DataQI.Commons`'s README for the breaking changes in the Commons API (`ICriterion`, `IOrderCriterion`, `Restrictions.StartingWith`).
+
 ### Using Customized Methods
 
 Customized Methods can be defined as normal class:
