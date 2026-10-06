@@ -106,11 +106,13 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             var criteria = new EntityCriteria();
             criteriaBuilder(criteria);
             var entityCommand = criteria.BuildCommand();
-            var entities = context
+            var query = context
                 .Set<TEntity>()
                 .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values)
-                .ToList();
+                .Where(entityCommand.Command, entityCommand.Values);
+            if (entityCommand.OrderBy != null)
+                query = query.OrderBy(entityCommand.OrderBy);
+            var entities = query.ToList();
             return entities;
         }
 
@@ -121,12 +123,47 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             var criteria = new EntityCriteria();
             criteriaBuilder(criteria);
             var entityCommand = criteria.BuildCommand();
-            var entities = await context
+            var query = context
                 .Set<TEntity>()
                 .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values)
-                .ToListAsync(cancellationToken);
+                .Where(entityCommand.Command, entityCommand.Values);
+            if (entityCommand.OrderBy != null)
+                query = query.OrderBy(entityCommand.OrderBy);
+            var entities = await query.ToListAsync(cancellationToken);
             return entities;
+        }
+
+        public TEntity FindOne(Func<ICriteria, ICriteria> criteriaBuilder)
+        {
+            Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
+            var criteria = new EntityCriteria();
+            criteriaBuilder(criteria);
+            var entityCommand = criteria.BuildCommand();
+            var query = context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .Where(entityCommand.Command, entityCommand.Values);
+            if (entityCommand.OrderBy != null)
+                query = query.OrderBy(entityCommand.OrderBy);
+            var entity = query.SingleOrDefault();
+            return entity;
+        }
+
+        public async Task<TEntity> FindOneAsync(Func<ICriteria, ICriteria> criteriaBuilder,
+            CancellationToken cancellationToken = default)
+        {
+            Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
+            var criteria = new EntityCriteria();
+            criteriaBuilder(criteria);
+            var entityCommand = criteria.BuildCommand();
+            var query = context
+                .Set<TEntity>()
+                .AsNoTracking()
+                .Where(entityCommand.Command, entityCommand.Values);
+            if (entityCommand.OrderBy != null)
+                query = query.OrderBy(entityCommand.OrderBy);
+            var entity = await query.SingleOrDefaultAsync(cancellationToken);
+            return entity;
         }
 
         public IEnumerable<TEntity> FindAll()

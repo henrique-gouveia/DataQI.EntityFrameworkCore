@@ -14,6 +14,12 @@ namespace DataQI.EntityFrameworkCore.Test.Query
         {
             Assert.Equal(commandExpected, command.Command);
             parametersExpected.ToExpectedObject().ShouldMatch(command.Values);
-        }            
+        }
+
+        protected void AssertCommand(string commandExpected, object parametersExpected, string orderByExpected, EntityCommand command)
+        {
+            AssertCommand(commandExpected, parametersExpected, command);
+            Assert.Equal(orderByExpected, command.OrderBy);
+        }
     }
 }
