@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Dynamic.Core;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 using DataQI.Commons.Query;
+using DataQI.Commons.Query.Support;
 using DataQI.Commons.Util;
 
 using DataQI.EntityFrameworkCore.Extensions;
@@ -101,69 +101,28 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         }
 
         public IEnumerable<TEntity> Find(Func<ICriteria, ICriteria> criteriaBuilder)
-        {
-            Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
-            var criteria = new EntityCriteria();
-            criteriaBuilder(criteria);
-            var entityCommand = criteria.BuildCommand();
-            var query = context
-                .Set<TEntity>()
-                .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values);
-            if (entityCommand.OrderBy != null)
-                query = query.OrderBy(entityCommand.OrderBy);
-            var entities = query.ToList();
-            return entities;
-        }
+            => CriteriaQuery(criteriaBuilder).ToList();
 
         public async Task<IEnumerable<TEntity>> FindAsync(Func<ICriteria, ICriteria> criteriaBuilder,
             CancellationToken cancellationToken = default)
-        {
-            Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
-            var criteria = new EntityCriteria();
-            criteriaBuilder(criteria);
-            var entityCommand = criteria.BuildCommand();
-            var query = context
-                .Set<TEntity>()
-                .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values);
-            if (entityCommand.OrderBy != null)
-                query = query.OrderBy(entityCommand.OrderBy);
-            var entities = await query.ToListAsync(cancellationToken);
-            return entities;
-        }
+            => await CriteriaQuery(criteriaBuilder).ToListAsync(cancellationToken);
 
         public TEntity FindOne(Func<ICriteria, ICriteria> criteriaBuilder)
-        {
-            Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
-            var criteria = new EntityCriteria();
-            criteriaBuilder(criteria);
-            var entityCommand = criteria.BuildCommand();
-            var query = context
-                .Set<TEntity>()
-                .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values);
-            if (entityCommand.OrderBy != null)
-                query = query.OrderBy(entityCommand.OrderBy);
-            var entity = query.SingleOrDefault();
-            return entity;
-        }
+            => CriteriaQuery(criteriaBuilder).SingleOrDefault();
 
-        public async Task<TEntity> FindOneAsync(Func<ICriteria, ICriteria> criteriaBuilder,
+        public Task<TEntity> FindOneAsync(Func<ICriteria, ICriteria> criteriaBuilder,
             CancellationToken cancellationToken = default)
+            => CriteriaQuery(criteriaBuilder).SingleOrDefaultAsync(cancellationToken);
+
+        private IQueryable<TEntity> CriteriaQuery(Func<ICriteria, ICriteria> criteriaBuilder)
         {
             Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
-            var criteria = new EntityCriteria();
-            criteriaBuilder(criteria);
-            var entityCommand = criteria.BuildCommand();
-            var query = context
-                .Set<TEntity>()
-                .AsNoTracking()
-                .Where(entityCommand.Command, entityCommand.Values);
-            if (entityCommand.OrderBy != null)
-                query = query.OrderBy(entityCommand.OrderBy);
-            var entity = await query.SingleOrDefaultAsync(cancellationToken);
-            return entity;
+            var criteria = criteriaBuilder(new Criteria());
+
+            var predicate = EntityPredicateVisitor<TEntity>.BuildPredicate(criteria);
+            var query = context.Set<TEntity>().AsNoTracking().Where(predicate);
+
+            return EntityOrderedQueryBuilder<TEntity>.BuildOrderedQuery(query, criteria.Orders);
         }
 
         public IEnumerable<TEntity> FindAll()

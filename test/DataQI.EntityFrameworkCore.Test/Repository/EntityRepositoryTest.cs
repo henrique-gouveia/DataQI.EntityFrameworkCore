@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 using ExpectedObjects;
 using Xunit;
@@ -384,6 +387,156 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 
                 Assert.False(ExistsCustomer(customer, useAsyncMethod));
                 Assert.Null(FindOneCustomer(customer, useAsyncMethod));
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TestFindWithEmptyCriteriaReturnsAllEntities(bool useAsyncMethod)
+        {
+            var customersExpected = InsertTestCustomersList();
+
+            Func<ICriteria, ICriteria> criteriaBuilder = criteria => criteria;
+
+            IEnumerable<Customer> customers;
+            if (useAsyncMethod)
+                customers = customerRepository.FindAsync(criteriaBuilder).Result;
+            else
+                customers = customerRepository.Find(criteriaBuilder);
+
+            customersExpected.ToExpectedObject().ShouldMatch(customers);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TestFindWithOnlyOrderingAndNoCriteriaKeepsOrdering(bool useAsyncMethod)
+        {
+            var customersList = InsertTestCustomersList();
+
+            Func<ICriteria, ICriteria> criteriaBuilder = criteria =>
+                criteria.AddOrder(Order.Desc(nameof(Customer.FullName)));
+
+            var customersExpected = customersList
+                .OrderByDescending(c => c.FullName, StringComparer.Ordinal)
+                .ToList();
+
+            IEnumerable<Customer> customers;
+            if (useAsyncMethod)
+                customers = customerRepository.FindAsync(criteriaBuilder).Result;
+            else
+                customers = customerRepository.Find(criteriaBuilder);
+
+            customersExpected.ToExpectedObject().ShouldMatch(customers);
+        }
+
+        [Theory]
+        [InlineData(false, 0)]
+        [InlineData(false, 1)]
+        [InlineData(false, 5)]
+        [InlineData(true, 0)]
+        [InlineData(true, 1)]
+        [InlineData(true, 5)]
+        public async Task TestFindOneByCriteriaLimitsQueryToTwoRows(bool useAsyncMethod, int matchingCount)
+        {
+            var customers = InsertTestCustomersList();
+            var interceptor = new QueryCommandInterceptor();
+            var options = new DbContextOptionsBuilder()
+                .UseSqlite(customerContext.Database.GetDbConnection())
+                .AddInterceptors(interceptor)
+                .Options;
+
+            using (var context = new ObservedContext(options))
+            {
+                interceptor.Commands.Clear();
+                var repository = new EntityRepository<Customer, int>(context);
+                Func<ICriteria, ICriteria> criteriaBuilder = criteria => criteria
+                    .Add(matchingCount == 5
+                        ? Restrictions.Not(Restrictions.Null(nameof(Customer.FullName)))
+                        : Restrictions.Equal(nameof(Customer.Id), matchingCount == 1 ? customers[0].Id : -1))
+                    .AddOrder(Order.Desc(nameof(Customer.FullName)));
+
+                if (matchingCount > 1)
+                {
+                    if (useAsyncMethod)
+                        await Assert.ThrowsAsync<InvalidOperationException>(() => repository.FindOneAsync(criteriaBuilder));
+                    else
+                        Assert.Throws<InvalidOperationException>(() => repository.FindOne(criteriaBuilder));
+                }
+                else
+                {
+                    var result = useAsyncMethod
+                        ? await repository.FindOneAsync(criteriaBuilder)
+                        : repository.FindOne(criteriaBuilder);
+
+                    if (matchingCount == 0)
+                        Assert.Null(result);
+                    else
+                        Assert.Equal(customers[0].Id, result.Id);
+                }
+
+                var command = Assert.Single(interceptor.Commands);
+                Assert.Matches(@"(?i)\bLIMIT\s+2\b", command);
+                Assert.Contains("ORDER BY", command);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task TestFindByCriteriaDoesNotLimitQuery(bool useAsyncMethod)
+        {
+            var customers = InsertTestCustomersList();
+            var interceptor = new QueryCommandInterceptor();
+            var options = new DbContextOptionsBuilder()
+                .UseSqlite(customerContext.Database.GetDbConnection())
+                .AddInterceptors(interceptor)
+                .Options;
+
+            using (var context = new ObservedContext(options))
+            {
+                interceptor.Commands.Clear();
+                var repository = new EntityRepository<Customer, int>(context);
+                Func<ICriteria, ICriteria> criteriaBuilder = criteria => criteria
+                    .Add(Restrictions.Not(Restrictions.Null(nameof(Customer.FullName))))
+                    .AddOrder(Order.Desc(nameof(Customer.FullName)));
+
+                var result = useAsyncMethod
+                    ? await repository.FindAsync(criteriaBuilder)
+                    : repository.Find(criteriaBuilder);
+
+                Assert.Equal(customers.Count, result.Count());
+                var command = Assert.Single(interceptor.Commands);
+                Assert.DoesNotContain("LIMIT", command);
+                Assert.Contains("ORDER BY", command);
+            }
+        }
+
+        private sealed class ObservedContext : TestContext
+        {
+            public ObservedContext(DbContextOptions options) : base(options)
+            {
+            }
+        }
+
+        private sealed class QueryCommandInterceptor : DbCommandInterceptor
+        {
+            public List<string> Commands { get; } = new List<string>();
+
+            public override InterceptionResult<DbDataReader> ReaderExecuting(
+                DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
+            {
+                Commands.Add(command.CommandText);
+                return result;
+            }
+
+            public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+                DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+                CancellationToken cancellationToken = default)
+            {
+                Commands.Add(command.CommandText);
+                return new ValueTask<InterceptionResult<DbDataReader>>(result);
             }
         }
 
