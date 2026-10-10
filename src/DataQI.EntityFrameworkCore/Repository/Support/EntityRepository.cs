@@ -22,7 +22,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
     /// <remarks>
     /// <para>
     /// <see cref="Insert(TEntity)"/>, <see cref="Save(TEntity)"/> and <see cref="Delete(TId)"/> (and their async
-    /// versions) only register the change in the context's change tracker. Nothing reaches the database until the
+    /// versions) only register the change in the context's change tracker. Changes are not persisted until the
     /// caller calls <c>SaveChanges</c> or <c>SaveChangesAsync</c> on the context.
     /// </para>
     /// <para>
