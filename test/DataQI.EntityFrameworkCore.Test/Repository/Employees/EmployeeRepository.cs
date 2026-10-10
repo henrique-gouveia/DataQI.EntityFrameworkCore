@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Dynamic.Core;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -25,7 +24,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Employees
             var employees = context
                 .Set<Employee>()
                 .Include(e => e.Department)
-                .Where("(Department.Name == @0)", name)
+                .Where(employee => employee.Department.Name == name)
                 .AsNoTracking()
                 .ToList();
 

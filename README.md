@@ -327,6 +327,10 @@ var personsByCriteriaAsync = await personRepository.FindAsync(criteria =>
     );
 ```
 
+#### Enum values in criteria
+
+For enum properties, including nullable enums, criteria accept enum values, numeric values and numeric strings such as `"1"`. String names such as `"Active"` are not supported and throw `FormatException`; pass the enum value itself instead. Numeric conversion uses invariant culture and the enum's underlying type. Numeric values are not checked against declared enum members, allowing flags combinations; values outside the underlying type's range throw `OverflowException`.
+
 ### Using Customized Methods
 
 Customized Methods can be defined as normal class:
@@ -413,6 +417,10 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 ## Limitations and caveats
 
 The DataQI EntityFrameworkCore Provider library is not an ORM, or it attempts to solve all data persistence problems. It provides a structure based on Repository Pattern that facilitates the rapid creation of repositories with methods that allow the creation, modification and deletion of data, as well as the preparation of simple queries by signing the methods declared in an interface, in order to avoid most of the effort involved in writing standard code in projects that use the [EntityFrameworkCore](https://github.com/dotnet/efcore) library.
+
+## Criteria AST (6.0)
+
+`Find`/`FindAsync`/`FindOne`/`FindOneAsync` now turn criteria into an `Expression<Func<TEntity, bool>>` predicate that EF Core translates to SQL, instead of a Dynamic LINQ string, and apply ordering with `OrderBy`/`ThenBy` expressions. The public types of the old pipeline were removed: `EntityCriteria`, `EntityCommandBuilder`, `IEntityCommandBuilder`, `IEntityExpressionBuilder`, the `Entity*Expression` classes, `EntityCommand` and `EntityCriterionExtensions`. `Restrictions` and `Func<ICriteria, ICriteria>` usage is unchanged. `IsNull` on a non-nullable property now fails with a clear exception instead of silently matching nothing. See `DataQI.Commons`'s README for the breaking changes in the Commons API (`ICriterion`, `IOrderCriterion`, `Restrictions.StartingWith`).
 
 ## Release Notes
 
