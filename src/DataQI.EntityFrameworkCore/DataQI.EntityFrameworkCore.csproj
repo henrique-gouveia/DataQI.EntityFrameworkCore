@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.0" />
-    <PackageReference Include="DataQI.Commons" Version="4.0.0" />
+    <PackageReference Include="DataQI.Commons" Version="4.0.0-preview.1" />
   </ItemGroup>
+
 </Project>
