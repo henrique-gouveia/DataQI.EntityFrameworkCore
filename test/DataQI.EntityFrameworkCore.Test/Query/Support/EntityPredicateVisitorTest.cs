@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 
 using DataQI.Commons.Query.Support;
 using DataQI.Commons.Query.Ast;
@@ -35,6 +36,16 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
 
             Assert.Single(entities.Where(predicate));
+        }
+
+        [Fact]
+        public void TestComparisonDoesNotEmbedValueAsConstant()
+        {
+            var criteria = new Criteria().Add(Restrictions.Equal("Name", "Adams"));
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria);
+            var comparison = Assert.IsAssignableFrom<BinaryExpression>(predicate.Body);
+
+            Assert.NotEqual(ExpressionType.Constant, comparison.Right.NodeType);
         }
 
         [Fact]
@@ -132,6 +143,100 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             Assert.Equal(entities.Length, entities.Count(predicate));
         }
 
+        [Theory]
+        [InlineData(LogicalKind.And)]
+        [InlineData(LogicalKind.Or)]
+        public void TestStandaloneEmptyJunctionIsRejected(LogicalKind kind)
+        {
+            var criteria = new Criteria().Add(new Junction(kind));
+
+            AssertEmptyJunctionRejected(criteria, kind);
+        }
+
+        [Theory]
+        [InlineData(LogicalKind.And)]
+        [InlineData(LogicalKind.Or)]
+        public void TestEmptyJunctionBeforeComparisonIsRejected(LogicalKind kind)
+        {
+            var criteria = new Criteria()
+                .Add(new Junction(kind))
+                .Add(Restrictions.Equal("Name", "Adams"));
+
+            AssertEmptyJunctionRejected(criteria, kind);
+        }
+
+        [Theory]
+        [InlineData(LogicalKind.And)]
+        [InlineData(LogicalKind.Or)]
+        public void TestEmptyJunctionAfterComparisonIsRejected(LogicalKind kind)
+        {
+            var criteria = new Criteria()
+                .Add(Restrictions.Equal("Name", "Adams"))
+                .Add(new Junction(kind));
+
+            AssertEmptyJunctionRejected(criteria, kind);
+        }
+
+        [Theory]
+        [InlineData(LogicalKind.And, LogicalKind.And, true)]
+        [InlineData(LogicalKind.And, LogicalKind.And, false)]
+        [InlineData(LogicalKind.And, LogicalKind.Or, true)]
+        [InlineData(LogicalKind.And, LogicalKind.Or, false)]
+        [InlineData(LogicalKind.Or, LogicalKind.And, true)]
+        [InlineData(LogicalKind.Or, LogicalKind.And, false)]
+        [InlineData(LogicalKind.Or, LogicalKind.Or, true)]
+        [InlineData(LogicalKind.Or, LogicalKind.Or, false)]
+        public void TestNestedEmptyJunctionIsRejected(LogicalKind outerKind, LogicalKind innerKind, bool emptyFirst)
+        {
+            var outer = new Junction(outerKind);
+            var empty = new Junction(innerKind);
+            var comparison = Restrictions.Equal("Name", "Adams");
+            if (emptyFirst)
+                outer.Add(empty).Add(comparison);
+            else
+                outer.Add(comparison).Add(empty);
+
+            var criteria = new Criteria().Add(outer);
+
+            AssertEmptyJunctionRejected(criteria, innerKind);
+        }
+
+        [Theory]
+        [InlineData(LogicalKind.And, LogicalKind.And)]
+        [InlineData(LogicalKind.And, LogicalKind.Or)]
+        [InlineData(LogicalKind.Or, LogicalKind.And)]
+        [InlineData(LogicalKind.Or, LogicalKind.Or)]
+        public void TestOnlyNestedEmptyJunctionIsRejected(LogicalKind outerKind, LogicalKind innerKind)
+        {
+            var criteria = new Criteria().Add(new Junction(outerKind)
+                .Add(new Junction(innerKind)));
+
+            AssertEmptyJunctionRejected(criteria, innerKind);
+        }
+
+        [Theory]
+        [InlineData(LogicalKind.And)]
+        [InlineData(LogicalKind.Or)]
+        public void TestNotOverEmptyJunctionIsRejected(LogicalKind kind)
+        {
+            var criteria = new Criteria().Add(Restrictions.Not(new Junction(kind)));
+
+            AssertEmptyJunctionRejected(criteria, kind);
+        }
+
+        [Theory]
+        [InlineData(LogicalKind.And)]
+        [InlineData(LogicalKind.Or)]
+        public void TestJunctionCanBePopulatedBeforeBuildingPredicate(LogicalKind kind)
+        {
+            var junction = new Junction(kind);
+            var criteria = new Criteria().Add(junction);
+
+            junction.Add(Restrictions.Equal("Name", "Adams"));
+
+            Assert.Equal("Adams", entities.Single(Compile(criteria)).Name);
+        }
+
         [Fact]
         public void TestMultipleTopLevelCriterionsJoinedWithAnd()
         {
@@ -154,6 +259,26 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             var predicate = Compile(new Criteria().Add(new Comparison("Stock", kind, value)));
 
             Assert.Equal(expectedCount, entities.Count(predicate));
+        }
+
+        [Theory]
+        [InlineData(ComparisonKind.GreaterThan, "Adams", 1)]
+        [InlineData(ComparisonKind.GreaterThanEqual, "Adams", 2)]
+        [InlineData(ComparisonKind.LessThan, "Barnes", 1)]
+        [InlineData(ComparisonKind.LessThanEqual, "Barnes", 2)]
+        public void TestStringComparisonMatchesCorrectly(ComparisonKind kind, string value, int expectedCount)
+        {
+            var predicate = Compile(new Criteria().Add(new Comparison("Name", kind, value)));
+
+            Assert.Equal(expectedCount, entities.Count(predicate));
+        }
+
+        [Fact]
+        public void TestStringBetweenIsInclusiveBothEnds()
+        {
+            var predicate = Compile(new Criteria().Add(Restrictions.Between("Name", "Adams", "Barnes")));
+
+            Assert.Equal(2, entities.Count(predicate));
         }
 
         [Theory]
@@ -202,6 +327,14 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                     .Add(Restrictions.Equal("Name", "Barnes"))));
 
             Assert.Equal("Barnes", entities.Single(Compile(criteria)).Name);
+        }
+
+        private static void AssertEmptyJunctionRejected(ICriteria criteria, LogicalKind kind)
+        {
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria));
+
+            Assert.Equal($"Junction '{kind}' must contain at least one criterion.", exception.Message);
         }
 
         private Func<FakeEntity, bool> Compile(ICriteria criteria)
