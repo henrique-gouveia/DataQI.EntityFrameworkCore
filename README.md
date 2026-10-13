@@ -249,6 +249,60 @@ var people = await personRepository.FindAsync(criteria => criteria
     .AddOrder(Order.Desc(nameof(Person.BirthDate))), cancellationToken);
 ```
 
+### Completing Query Methods with DataQI.Analyzers
+
+Add `DataQI.Analyzers` 0.1.0-preview.1 to a project using this provider and DataQI.Commons 4.0.0-preview.1:
+
+```xml
+<PackageReference Include="DataQI.Analyzers" Version="0.1.0-preview.1" PrivateAssets="all" />
+```
+
+In an interface extending `IEntityRepository<TEntity, TId>`, type `F` after the return type to get `FindBy`. Completion then offers public scalar properties, compatible operators, `And`/`Or`, and `OrderBy` with `Asc`/`Desc`. Ctrl+Space after the return type also offers `FindBy`. Names the runtime would misread, such as `InStock` or a property ending in `Async`, are omitted from suggestions.
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using DataQI.EntityFrameworkCore.Repository;
+using DataQI.EntityFrameworkCore.Repository.Support;
+using Microsoft.EntityFrameworkCore;
+
+public class Product
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+}
+
+public interface IProductRepository : IEntityRepository<Product, int>
+{
+    IEnumerable<Product> FindByNameStartingWithAndPriceGreaterThanOrderByPriceDesc(
+        string prefix, decimal minimumPrice);
+
+    Task<IEnumerable<Product>> FindByNameStartingWithAndPriceGreaterThanOrderByPriceDescAsync(
+        string prefix, decimal minimumPrice, CancellationToken cancellationToken = default);
+}
+
+public static class ProductQueries
+{
+    public static async Task RunAsync(DbContext context, CancellationToken cancellationToken)
+    {
+        var repository = new EntityRepositoryFactory().GetRepository<IProductRepository>(context);
+        var matches = repository.FindByNameStartingWithAndPriceGreaterThanOrderByPriceDesc("A", 10m);
+        var asyncMatches = await repository.FindByNameStartingWithAndPriceGreaterThanOrderByPriceDescAsync(
+            "A", 10m, cancellationToken);
+
+        foreach (var product in matches)
+            Console.WriteLine(product.Name);
+        foreach (var product in asyncMatches)
+            Console.WriteLine(product.Name);
+    }
+}
+```
+
+The caller supplies a configured `DbContext`. The trailing `CancellationToken` is passed to the EF Core async query.
+
 ### Using Linq Query Builder
 
 Customized Queries can be specified by using the linq functionality to evaluate queries against the data source.
