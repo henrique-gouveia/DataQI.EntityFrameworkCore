@@ -7,6 +7,14 @@ Data Query Interface Provider for [EntityFrameworkCore](https://github.com/dotne
 [![NuGet](https://img.shields.io/nuget/v/DataQI.EntityFrameworkCore.svg)](https://www.nuget.org/packages/DataQI.EntityFrameworkCore/)
 [![License](https://img.shields.io/github/license/henrique-gouveia/DataQI.EntityFrameworkCore.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/blob/main/LICENSE.txt)
 
+## Framework and Dependency Compatibility
+
+The library targets only `net6.0`. Its minimum EF Core dependency is 6.0.36, the latest patch in the 6.x line, preserving compatibility with existing EF Core 6 consumers.
+
+Tests target only `net10.0` and exercise EF Core 10.0. Keep your EF Core database provider and other EF Core packages on the same major version. Samples and benchmarks use .NET 10 and EF Core 10.0 with the current provider project.
+
+Development requires the .NET 10 SDK.
+
 ## Getting Started
 
 ### Installing
@@ -440,8 +448,10 @@ The following metrics show how long it takes to execute top CRUD statements on a
 The benchmarks can be found at [DataQI.EntityFrameworkCore.Benchmarks](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/tree/main/test/DataQI.EntityFrameworkCore.Benchmarks) (contributions welcome!) and can be run via:
 
 ```bash
-dotnet run --project .\test\DataQI.EntityFrameworkCore.Benchmarks\DataQI.EntityFrameworkCore.Benchmarks.csproj  -f net6.0 -c Release
+dotnet run --project .\test\DataQI.EntityFrameworkCore.Benchmarks\DataQI.EntityFrameworkCore.Benchmarks.csproj  -f net10.0 -c Release
 ```
+
+The measurements below are historical results from the earlier .NET 6 setup, not measurements of the current .NET 10 build.
 
 ```
 
