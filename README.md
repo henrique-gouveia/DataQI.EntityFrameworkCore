@@ -1,25 +1,25 @@
 # DataQI EntityFrameworkCore
 
-Data Query Interface Provider for [EntityFrameworkCore](https://github.com/dotnet/efcore) written in C# and built around essential features of the .NET Standard that use infrastructure provided by [DataQI.Commons](https://github.com/henrique-gouveia/DataQI.Commons) and it turns your Data Repositories a live interface. Its purpose is to facilitate the construction of data access layers and make possible the definition of repository interfaces, providing behaviors for standard operations as well as to define customized queries through method signatures.
+DataQI EntityFrameworkCore creates repository implementations from C# interfaces using [EF Core](https://github.com/dotnet/efcore) and [DataQI.Commons](https://github.com/henrique-gouveia/DataQI.Commons). It provides CRUD operations, queries derived from method names, criteria, LINQ predicates, and custom repository methods.
 
 [![Build](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml/badge.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/actions/workflows/dotnet.yml)
 [![codecov](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore/branch/main/graph/badge.svg)](https://codecov.io/gh/henrique-gouveia/DataQI.EntityFrameworkCore)
 [![NuGet](https://img.shields.io/nuget/v/DataQI.EntityFrameworkCore.svg)](https://www.nuget.org/packages/DataQI.EntityFrameworkCore/)
-[![License](https://img.shields.io/github/license/henrique-gouveia/DataQI.EntityFrameworkCore.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/blob/main/LICENSE.txt)
+[![License](https://img.shields.io/github/license/henrique-gouveia/DataQI.EntityFrameworkCore.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/blob/main/LICENSE)
 
 ## Getting Started
 
 ### Installing
 
-This library can add in to the project by the way:
+Install the package in your application and the EF Core database provider for your database:
 
-    dotnet add package DataQI.EntityFrameworkCore
-
-See [Nuget](https://www.nuget.org/packages/DataQI.EntityFrameworkCore) for other options.
+```bash
+dotnet add package DataQI.EntityFrameworkCore
+```
 
 ### Defining a Repository
 
-A Repository Interface should extend the interface `IEntityRepository<TEntity>` localized in the namespace `DataQI.EntityFrameworkCore.Repository`, where the `TEntity` is a _Plain Old CSharp Object (POCO)_ and `TId` is its key type.
+Extend `IEntityRepository<TEntity, TId>` from `DataQI.EntityFrameworkCore.Repository`. `TEntity` is the mapped entity class; `TId` is the type of its single primary key. Identifier methods take that key value, for example `FindOne(1)` and `Delete(person.Id)`. Composite keys are not supported by these identifier methods.
 
 ```csharp
 [Table("Person")]
@@ -39,7 +39,7 @@ public class Person
     public DateTime RegisterDate { get; set; }
     public string Email { get; set; }
     public string Phone { get; set; }
-    public boolean Active { get; set; }
+    public bool Active { get; set; }
 }
 
 public interface IPersonRepository : IEntityRepository<Person, int> { }
@@ -47,347 +47,300 @@ public interface IPersonRepository : IEntityRepository<Person, int> { }
 
 ### Instancing a Repository
 
-You must use an instance of the `EntityRepositoryFactory` class to instantiate a Repository, located in the `DataQI.EntityFrameworkCore.Repository.Support` namespace, which requires a `DbContext` to make its calls:
+You must use an instance of the `EntityRepositoryFactory` class to instantiate a repository, located in the `DataQI.EntityFrameworkCore.Repository.Support` namespace, which requires a `DbContext` to make its calls:
 
 ```csharp
 DbContext dbContext = CreateDbContext();
 var repositoryFactory = new EntityRepositoryFactory();
 
-personRepository = repositoryFactory.GetRepository<IPersonRepository>(dbContext);
+var personRepository = repositoryFactory.GetRepository<IPersonRepository>(dbContext);
 ```
+
+Disposing a repository disposes its context.
 
 ### Configuring by using Microsoft's Dependency Injection
 
-After you have installed this lib, if you're using some type of .NET Web Application, you can do the following:
+After you have installed this library, if you're using a .NET web application, you can do the following:
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 ```
 
-Don't forget to configure your `DbContext`:
+Don't forget to configure your `DbContext` (here, `PeopleContext` stands for your application's context):
 
 ```csharp
 // Configure DbContext like you prefer...
-builder.Services.AddDbContext<DbContext>(...);
+builder.Services.AddDbContext<PeopleContext>(...);
 ```
 
 If you don't need a specific repository interface, you can just register a service by doing the following:
 
 ```csharp
 // It'll add IEntityRepository<Entity, int> repository service...
-builder.Services.AddDefaultEntityRepository<Person, int, DbContext>();
+builder.Services.AddDefaultEntityRepository<Person, int, PeopleContext>();
 ```
 
 If you need a specific repository interface, you can register it by doing the following:
 
 ```csharp
 // It'll add IPersonRepository repository service...
-builder.Services.AddEntityRepository<IPersonRepository, DbContext>();
+builder.Services.AddEntityRepository<IPersonRepository, PeopleContext>();
 ```
 
 Now, if you need to add custom support using a repository implementation, you can register it by doing the following:
 
 ```csharp
 // It'll add IPersonRepository repository service supported by SomeCustomRepository ...
-builder.Services.AddEntityRepository<IPersonRepository, SomeCustomRepository, DbContext>();
+builder.Services.AddEntityRepository<IPersonRepository, SomeCustomRepository, PeopleContext>();
 ```
 
-Take a look at the [Samples](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/tree/main/samples) to see how this works.
+The repository and `EntityRepositoryFactory` are registered as scoped services with `TryAdd` semantics, preserving existing registrations, and `AddDbContext` is scoped by default. Resolve the repository within a scope and await each operation before starting another on the same context.
+
+Let the scope manage the lifetime of the context: disposing a repository by hand also affects other services sharing it. See the [EF Core context lifetime documentation](https://learn.microsoft.com/ef/core/dbcontext-configuration/) and take a look at the [Samples](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/tree/main/samples) to see how this works.
 
 ### Using Default Methods
 
-A Repository Interface that extends `IEntityRepository<TEntity>` inherit its standard operations:
+| Operation | Synchronous / asynchronous methods | Input |
+| --- | --- | --- |
+| Insert | `Insert` / `InsertAsync` | Entity |
+| Insert or update | `Save` / `SaveAsync` | Entity |
+| Delete | `Delete` / `DeleteAsync` | `TId` |
+| Check existence | `Exists` / `ExistsAsync` | `TId` |
+| Find by identifier | `FindOne` / `FindOneAsync` | `TId` |
+| Find one by criteria | `FindOne` / `FindOneAsync` | Criteria builder |
+| Find many | `Find` / `FindAsync` | Criteria, predicate, or LINQ builder |
+| Find all | `FindAll` / `FindAllAsync` | None |
 
-| **Operation**            | **Methods**                            |
-|--------------------------|----------------------------------------|
-| **Delete**               | Delete, DeleteAsync                    |
-| **Exists**               | Exists, ExistsAsync                    |
-| **Find Single**          | FindOne, FindOneAsync                  |
-| **Find Many**            | Find, FindAsync, FindAll, FindAllAsync |
-| **Insert**               | Insert, InsertAsync                    |
-| **Insert** or **Update** | Save, SaveAsync                        |
-
-#### Sample
+Write operations register changes in the context. Call `SaveChanges` or `SaveChangesAsync` to persist them. `Save` inserts when the key does not exist; otherwise it copies values to the existing entity and marks it modified. Delete requires an existing identifier.
 
 ```csharp
 personRepository.Insert(person);
-await personRepository.InsertAsync(person);
-
-personRepository.Save(person);
-await personRepository.SaveAsync(person);
-
-personRepository.Delete(person);
-await personRepository.DeleteAsync(person);
-
-var exists = personRepository.Exists(person);
-exists = await personRepository.ExistsAsync(person);
-
-var allPersons = personRepository.FindAll();
-allPersons = await personRepository.FindAllAsync();
-
-var onePerson = personRepository.FindOne(1);
-onePerson = await personRepository.FindOneAsync(1);
+context.SaveChanges();
+person.Active = false;
+await personRepository.SaveAsync(person, cancellationToken);
+await context.SaveChangesAsync(cancellationToken);
+var allPeople = await personRepository.FindAllAsync(cancellationToken);
+var onePerson = personRepository.FindOne(person.Id);
+var exists = personRepository.Exists(person.Id);
+await personRepository.DeleteAsync(person.Id, cancellationToken);
+await context.SaveChangesAsync(cancellationToken);
 ```
+
+Identifier lookups return tracked entities and can return an entity already in the change tracker. Criteria, query methods, predicate searches, and `FindAll` return entities without tracking. `Find()` and LINQ query builders use the context's default tracking behavior; add `AsNoTracking()` when appropriate.
 
 ### Using Query Methods
 
-Customized Queries can be defined through method signatures with the following conventions:
-
-- The method name can be initiated with the prefix `FindBy`.
-- The next step should be indicated the field that will be want to apply an operator.
-- After the field name, should be indicated the operator (column `Operador` from the table below). The `Equal` is assumed how default operator if nothing it's indicate.
-- Finally, each sentence composition can be combined with another through of the `Conjunctions` _AND_ and `Disjunction` _OR_.
+Declare query methods on a repository interface and call them with values. The [Commons query method reference](https://github.com/henrique-gouveia/DataQI.Commons/blob/main/README.md#query-methods) defines aliases, argument counts, precedence, reserved property names, ordering, and supported return types.
 
 #### Supported keywords inside method names
 
-| **Keyword**          | **Sample**                                | **Fragment**                                |
-|----------------------|-------------------------------------------|---------------------------------------------|
-| **Equal**            | FindByName, FindByName**Equal**           | where Name **=** @0                         |
-| **NotEqual**         | FindByName**Not**, FindByName**NotEqual** | where Name **!=** @0                        |
-| **Between**          | FindByAge**Between**                      | where Age **>=** @0 **&&** Age **<=** @1    |
-| **NotBetween**       | FindByAge**NotBetween**                   | where !(Age **>=** @0 **&&** Age **<=** @1) |
-| **GreaterThan**      | FindByBirthDate**GreaterThan**            | where BirthDate **>** @0                    |
-| **GreaterThanEqual** | FindByBirthDate**GreaterThanEqual**       | where BirthDate **>=** @0                   |
-| **LessThan**         | FindByBirthDate**LessThan**               | where BirthDate **<** @0                    |
-| **LessThanEqual**    | FindByBirthDate**LessThanEqual**          | where BirthDate **<=** @0                   |
-| **In**               | FindByAddressType**In**                   | where **@0.Contains**(AddressType)          |
-| **NotIn**            | FindByAddressType**NotIn**                | where !**@0.Contains**(AddressType)         |
-| **Null**             | FindByEmail**Null**                       | where Email **== null**                     |
-| **NotNull**          | FindByEmail**NotNull**                    | where Email **!= null**                     |
-| **StartingWith**     | FindByName**StartingWith**                | where Name.**StartsWith(@0)**               |
-| **NotStartingWith**  | FindByName**NotStartingWith**             | where !Name.**StartsWith(@0)**              |
-| **EndingWith**       | FindByName**EndingWith**                  | where Name.**EndsWith(@0)**                 |
-| **NotEndingWith**    | FindByName**NotEndingWith**               | where !Name.**EndsWith(@0)**                |
-| **Containing**       | FindByName**Containing**                  | where Name.**Contains(@0)**                 |
-| **NotContaining**    | FindByName**NotContaining**               | where !Name.**Contains(@0)**                |
-| **Like**             | FindByName**Like**                        | where Name.**Contains(@0)**                 |
-| **NotLike**          | FindByName**NotLike**                     | where !Name.**Contains(@0)**                |
-| **And**              | FindByName**And**Email                    | where (Name = @0 **&&** Email = @1)         |
-| **Or**               | FindByName**Or**Email                     | where (Name = @0 **\|\|** Email = @1)       |
+Equality is the default operator. Matching is case-sensitive, and values are consumed left to right. The provider builds expression trees that EF Core translates for the selected database. The table shows equivalent C# predicates, where `p` is the entity and `value`, `start`, `end`, and `values` are supplied arguments.
+
+| Keyword | Other forms | Args | Equivalent predicate |
+| --- | --- | ---: | --- |
+| *(none)* / `Equal` | `Equals`, `IsEqual`, `IsEquals` | 1 | `p.FirstName == value` |
+| `Not` + keyword | negation marker (`NotEqual`, `NotBetween`, `NotIn`, `NotNull`, `NotLike`...) | same | negates the corresponding predicate, e.g. `!(p.FirstName == value)` |
+| `Between` | `IsBetween` | 2 | `p.BirthDate >= start && p.BirthDate <= end` |
+| `GreaterThan` / `GreaterThanEqual` | `IsGreaterThan` / `IsGreaterThanEqual` | 1 | `p.BirthDate > value` / `p.BirthDate >= value` |
+| `LessThan` / `LessThanEqual` | `IsLessThan` / `IsLessThanEqual` | 1 | `p.BirthDate < value` / `p.BirthDate <= value` |
+| `In` | `IsIn` | 1 | `values.Contains(p.LastName)` |
+| `Null` | `IsNull` | 0 | `p.Email == null` |
+| `StartingWith` | `StartsWith`, `IsStartingWith` | 1 | `p.FirstName.StartsWith(value)` |
+| `EndingWith` | `EndsWith`, `IsEndingWith` | 1 | `p.FirstName.EndsWith(value)` |
+| `Containing` | `Contains`, `IsContaining` | 1 | `p.FirstName.Contains(value)` |
+| `Like` | `IsLike` | 1 | `p.FirstName.Contains(value)` |
+| `And` / `Or` | | 0 | `left && right` / `left \|\| right` |
+| `OrderBy`, `Asc`, `Desc` | | 0 | ordering (see [Ordering Query Results](#ordering-query-results)) |
+
+Text arguments are literal strings: `Like("Ada")` and `Containing("Ada")` both perform substring searches. `%` is literal here. The Dapper provider uses SQL `LIKE` patterns instead, so text arguments are not portable unchanged. Case sensitivity and supported translations depend on the database provider and collation. String relational comparisons use `string.Compare(property, value)` against zero.
+
+`Null` and `NotNull` require a reference or nullable property; applying them to a non-nullable value type throws `InvalidOperationException`. For `In`, use an `object[]` (box numeric values, for example `new object[] { 1, 2 }`) or a covariant reference array such as `string[]`; the shared parser does not accept `int[]` or lists.
+
+With EF Core's default null semantics, negating equality to a non-null value includes rows where the property is null. For example, `FindByEmailNotEqual("ada@example.com")` also matches null email values. Dapper's SQL negation excludes those rows. EF Core's `UseRelationalNulls` configuration changes this behavior; add an explicit `NotNull` condition when the query must exclude nulls. See [EF Core null comparisons](https://learn.microsoft.com/ef/core/querying/null-comparisons).
 
 #### Sample
 
 ```csharp
 public interface IPersonRepository : IEntityRepository<Person, int>
 {
-    IEnumerable<Person> FindByLastName(string name);
-    IEnumerable<Person> FindByBirthDateBetween(DateTime startDate, DateTime endDate);
-    IEnumerable<Person> FindByFirstNameLikeAndActive(string name, bool active = true);
-    IEnumerable<Person> FindByEmailLikeOrPhoneNotNull(string email);
-    IEnumerable<Person> FindByFirstNameAndLastNameOrBirthDateGreaterThan(string firstName, string lastName, DateTime registerDate);
+    IEnumerable<Person> FindByLastName(string lastName);
+    IEnumerable<Person> FindByBirthDateBetween(DateTime start, DateTime end);
+    IEnumerable<Person> FindByFirstNameContainingAndActive(string name, bool active);
+    IEnumerable<Person> FindByEmailContainingOrPhoneNotNull(string email);
+    IEnumerable<Person> FindByFirstNameAndLastNameOrBirthDateGreaterThan(
+        string firstName, string lastName, DateTime birthDate);
 }
+```
 
-DbContext dbContext = CreateDbContext();
-var repositoryFactory = new EntityRepositoryFactory();
-
-var personRepository = factory.GetRepository<IPersonRepository>(dbContext);
-
-var persons = personRepository.FindByLastName("A Last Name");
-persons = personRepository.FindByBirthDateBetween(new DateTime(2015, 1, 1), new DateTime(2020, 1, 1));
-persons = personRepository.FindByFirstNameLikeAndActive(string name, bool active = true);
-persons = personRepository.FindByEmailLikeOrPhoneNotNull(string email);
-persons = personRepository.FindFindByFirstNameAndLastNameOrBirthDateGreaterThan("A First Name", "A Last Name", new DateTime(2019, 1, 1));
+```csharp
+var people = personRepository.FindByLastName("Lovelace");
+people = personRepository.FindByBirthDateBetween(new DateTime(1800, 1, 1), new DateTime(1900, 1, 1));
+people = personRepository.FindByFirstNameContainingAndActive("Ada", true);
+people = personRepository.FindByEmailContainingOrPhoneNotNull("@example.com");
+people = personRepository.FindByFirstNameAndLastNameOrBirthDateGreaterThan(
+    "Ada", "Lovelace", new DateTime(1900, 1, 1));
 ```
 
 ### Using Async Query Methods
 
-Query Methods can also be declared as asynchronous, returning `Task<IEnumerable<TEntity>>`. The method name may or may not carry the `Async` suffix — it's discarded while parsing the query, so `FindByLastName` and `FindByLastNameAsync` behave identically. An optional trailing `CancellationToken` parameter is forwarded to the underlying query.
+Return `Task<IEnumerable<Person>>` or `Task<Person>` to run a query asynchronously. The return type selects synchronous or asynchronous execution; a trailing `Async` in the name is optional. A final `CancellationToken` is forwarded to asynchronous EF Core queries.
 
 ```csharp
-public interface IPersonRepository : IEntityRepository<Person, int>
-{
-    Task<IEnumerable<Person>> FindByLastNameAsync(string name);
-    Task<IEnumerable<Person>> FindByLastNameAsync(string name, CancellationToken cancellationToken);
-}
+// Added to IPersonRepository
+Task<IEnumerable<Person>> FindByLastNameAsync(
+    string lastName, CancellationToken cancellationToken = default);
+```
 
-var persons = await personRepository.FindByLastNameAsync("A Last Name");
-persons = await personRepository.FindByLastNameAsync("A Last Name", cancellationToken);
+```csharp
+var people = await personRepository.FindByLastNameAsync("Lovelace", cancellationToken);
 ```
 
 ### Using Single-Entity Query Methods
 
-Query Methods can also be declared to return a single entity directly (`TEntity` or `Task<TEntity>`) instead of a collection. Zero matches returns `null`; more than one match throws `InvalidOperationException`.
+A query method can return `Person` or `Task<Person>`. Zero matches returns `null`; multiple matches throw `InvalidOperationException`, including when ordered. Return `IEnumerable<Person>` for collections.
 
 ```csharp
-public interface IPersonRepository : IEntityRepository<Person, int>
-{
-    Person FindByEmail(string email);
-    Task<Person> FindByEmailAsync(string email);
-    Task<Person> FindByEmailAsync(string email, CancellationToken cancellationToken);
-}
+// Added to IPersonRepository
+Person FindByEmail(string email);
+Task<Person> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
+```
 
-var person = personRepository.FindByEmail("person@example.com");
-person = await personRepository.FindByEmailAsync("person@example.com");
-person = await personRepository.FindByEmailAsync("person@example.com", cancellationToken);
+```csharp
+var person = await personRepository.FindByEmailAsync("ada@example.com", cancellationToken);
 ```
 
 ### Ordering Query Results
 
-Add an `OrderBy` suffix to a query method to sort its results. Each non-final property needs an `Asc` or `Desc` suffix; the final property defaults to ascending when its direction is omitted.
-Ordering does not change single-entity behavior: a `FindOne` query still throws `InvalidOperationException` when multiple rows match.
+`OrderBy` follows at least one filter condition. Specify `Asc` or `Desc` after each non-final sort property; the final direction defaults to ascending. For example, the method below sorts by first name ascending, then birth date descending.
 
 ```csharp
-public interface IPersonRepository : IEntityRepository<Person, int>
-{
-    IEnumerable<Person> FindByLastNameOrderByFirstNameAscBirthDateDesc(string lastName);
-    Task<IEnumerable<Person>> FindByLastNameOrderByFirstNameAscBirthDateDescAsync(
-        string lastName,
-        CancellationToken cancellationToken);
-}
-
-var people = await personRepository.FindByLastNameOrderByFirstNameAscBirthDateDescAsync(
-    "Smith",
-    cancellationToken);
+// Added to IPersonRepository
+Task<IEnumerable<Person>> FindByLastNameOrderByFirstNameAscBirthDateDescAsync(
+    string lastName, CancellationToken cancellationToken = default);
 ```
 
-Criteria queries can also add ordered properties explicitly:
-
 ```csharp
-var people = await personRepository.FindAsync(criteria => criteria
-    .Add(Restrictions.Equal("LastName", "Smith"))
-    .AddOrder(Order.Asc(nameof(Person.FirstName)))
-    .AddOrder(Order.Desc(nameof(Person.BirthDate))), cancellationToken);
+var ordered = await personRepository.FindByLastNameOrderByFirstNameAscBirthDateDescAsync(
+    "Lovelace", cancellationToken);
 ```
 
-### Using Linq Query Builder
+### Query-method completion
 
-Customized Queries can be specified by using the linq functionality to evaluate queries against the data source.
+Completion is provided by [DataQI.Analyzers](https://github.com/henrique-gouveia/DataQI.Analyzers), which comes with the Commons 4.0 dependency (see the [Commons reference](https://github.com/henrique-gouveia/DataQI.Commons/blob/main/README.md#completing-query-methods-with-dataqianalyzers)). See the DataQI.Analyzers repository for compatible IDEs and editor configuration.
+
+Specific to this provider: relational comparisons and `Between` are suggested for enum properties, but this provider cannot translate them; use equality or `In` instead. The [shared grammar](https://github.com/henrique-gouveia/DataQI.Commons/blob/main/README.md#query-methods) and the provider's translation rules determine which queries work.
+
+### Using Linq Query and Expression Builders
+
+Compose queries using `Find()`, a query builder, or a strongly typed predicate. Use EF Core's async terminal operators when composing directly from `Find()`.
 
 ```csharp
-var persons = personRepository.Find()
-    .Where(p => p.FirstName.Contains("Name") 
-        && (
-            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
-            || p.RegisterDate > new DateTime(2019, 1, 1)
-        )
+var first = personRepository.Find()
+    .Where(p => p.FirstName.Contains("Ada") && p.Active)
     .FirstOrDefault();
 
-var persons = personRepository.Find(query => query
-    .Where(p => p.FirstName.Contains("Name") 
-        && (
-            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
-            || p.RegisterDate > new DateTime(2019, 1, 1)
-        )
+var page = personRepository.Find(query => query
+    .Where(p => p.BirthDate >= new DateTime(1800, 1, 1)
+        && p.BirthDate <= new DateTime(1900, 1, 1))
+    .OrderBy(p => p.Id)
     .Skip(0)
     .Take(20));
 
-var persons = await personRepository.FindAsync(query => query
-    .Where(p => p.FirstName.Contains("Name") 
-        && (
-            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
-            || p.RegisterDate > new DateTime(2019, 1, 1)
-        )
+var asyncPage = await personRepository.FindAsync(query => query
+    .Where(p => p.Active)
+    .OrderBy(p => p.Id)
     .Skip(0)
-    .Take(20));
-```
+    .Take(20), cancellationToken);
 
-### Using Linq Expression Builder
-
-Customized Queries can be specified by using a strongly typed lambda expression to build predicates.
-
-```csharp
-var persons = personRepository.Find(p => 
-        p.FirstName.Contains("Name") 
-        && (
-            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
-            || p.RegisterDate > new DateTime(2019, 1, 1)
-        )
-    );
-
-var persons = await personRepository.FindAsync(p => 
-        p.FirstName.Contains("Name") 
-        && (
-            (p.BirthDate >= new DateTime(2015, 1, 1) && o.BirthDate <= new DateTime(2020, 1, 1))
-            || p.RegisterDate > new DateTime(2019, 1, 1)
-        )
-    );
+var matches = personRepository.Find(p => p.FirstName.Contains("Ada")
+    && (p.BirthDate <= new DateTime(1900, 1, 1) || p.Active));
+var asyncMatches = await personRepository.FindAsync(
+    p => p.LastName == "Lovelace", cancellationToken);
+var firstAsync = await personRepository.Find()
+    .OrderBy(p => p.Id)
+    .FirstOrDefaultAsync(cancellationToken);
 ```
 
 ### Using Criteria Definitions
 
-Customized Queries can be specified by a simple Criteria Query API where the main artifacts are localized in the namespace `DataQI.Common.Query` and `DataQI.Common.Query.Support`.
+Use `Restrictions` and `Order` from `DataQI.Commons.Query.Support`. Top-level criteria are combined with `And`; use `Disjunction` for an explicit `Or` group.
 
 ```csharp
-var personsByCriteria = personRepository.Find(criteria =>
-    criteria
-        .Add(Restrictions.Like("FirstName", "%Name%"))
-        .Add(Restrictions
-            .Disjuction()
-            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
-            .Add(Restrictions.Equal("Active", true)))
-    );
+var people = personRepository.Find(criteria => criteria
+    .Add(Restrictions.Containing(nameof(Person.FirstName), "Ada"))
+    .Add(Restrictions.Disjunction()
+        .Add(Restrictions.Between(nameof(Person.BirthDate),
+            new DateTime(1800, 1, 1), new DateTime(1900, 1, 1)))
+        .Add(Restrictions.Equal(nameof(Person.Active), true)))
+    .AddOrder(Order.Asc(nameof(Person.LastName)))
+    .AddOrder(Order.Desc(nameof(Person.BirthDate))));
 
-var personsByCriteriaAsync = await personRepository.FindAsync(criteria =>
-    criteria
-        .Add(Restrictions.Like("LastName", "%Name%"))
-        .Add(Restrictions
-            .Disjuction()
-            .Add(Restrictions.Between("BirthDate", new DateTime(2015, 1, 1), new DateTime(2020, 1, 1)))
-            .Add(Restrictions.GreaterThan("RegisterDate", new DateTime(2019, 1, 1))))
-    );
+var asyncPeople = await personRepository.FindAsync(criteria => criteria
+    .Add(Restrictions.Containing(nameof(Person.LastName), "Love"))
+    .Add(Restrictions.Not(Restrictions.Null(nameof(Person.Email))))
+    .AddOrder(Order.Asc(nameof(Person.FirstName))), cancellationToken);
+
+var onePerson = await personRepository.FindOneAsync(criteria => criteria
+    .Add(Restrictions.Equal(nameof(Person.Email), "ada@example.com")), cancellationToken);
 ```
 
 #### Enum values in criteria
 
-For enum properties, including nullable enums, criteria accept enum values, numeric values and numeric strings such as `"1"`. String names such as `"Active"` are not supported and throw `FormatException`; pass the enum value itself instead. Numeric conversion uses invariant culture and the enum's underlying type. Numeric values are not checked against declared enum members, allowing flags combinations; values outside the underlying type's range throw `OverflowException`.
+Equality and membership criteria accept enum values, numeric values, and numeric strings such as `"1"`, including for nullable enum properties. String member names such as `"Active"` throw `FormatException`; pass the enum value instead. Numeric conversion uses invariant culture and the enum's underlying type. Values need not name a declared member; out-of-range values throw `OverflowException`.
+
+`GreaterThan`, `GreaterThanEqual`, `LessThan`, `LessThanEqual`, and `Between` do not support enum or `bool` properties: constructing these comparisons throws `InvalidOperationException`. Use equality or membership criteria for these types.
 
 ### Using Customized Methods
 
-Customized Methods can be defined as normal class:
-
-- The method should be defined in the repository interface.
-- The class with implementation may or may not implement the interface.
-- This can be used for any kind of customization that you want.
+Declare a custom method on an interface and supply a class with a matching public method. The class can inherit `EntityRepository<Person, int>` without implementing the custom interface; the factory combines its methods with the interface's derived queries.
 
 ```csharp
-public interface IPersonRepository : IEntityRepository<Person, int>
+public interface ICustomPersonRepository : IEntityRepository<Person, int>
 {
-    // Query Methods
     IEnumerable<Person> FindByEmailNotNull();
-    IEnumerable<Person> FindByFirstNameStartingWith(string firstName);
-
-    // Customized Methods
-    void AddAll(IEnumerable<Person> persons);
+    void AddAll(IEnumerable<Person> people);
 }
 
 public class PersonRepository : EntityRepository<Person, int>
 {
-    public void AddAll(IEnumerable<Person> persons)
+    public PersonRepository(DbContext context) : base(context) { }
+
+    public void AddAll(IEnumerable<Person> people)
     {
-        foreach (var person in persons)
+        foreach (var person in people)
         {
-            this.Insert(person)
+            Insert(person);
         }
     }
 }
+```
 
-// Getting Repository
-DbContext dbContext = CreateDbContext();
+Pass the custom implementation to the factory:
+
+```csharp
 var repositoryFactory = new EntityRepositoryFactory();
-
-var personRepository = factory.GetRepository<IPersonRepository>(() => new PersonRepository(dbContext));
-
-// Using Query Methods
-var persons = personRepository.FindByEmailNotNull();
-persons = personRepository.FindByFirstNameStartingWith("Name");
-
-// Using Customized Methods
-person1 = new Person() {...};
-person2 = new Person() {...};
-person3 = new Person() {...};
-
-personRepository.AddAll(new List<Person> { person1, person2, person3 });
+var personRepository = repositoryFactory.GetRepository<ICustomPersonRepository>(
+    () => new PersonRepository(context));
+personRepository.AddAll(new[]
+{
+    new Person { FirstName = "Ada", LastName = "Lovelace" },
+    new Person { FirstName = "Grace", LastName = "Hopper" }
+});
+context.SaveChanges();
+var people = personRepository.FindByEmailNotNull();
 ```
 
 ## Performance
 
-The following metrics show how long it takes to execute top CRUD statements on a SQLServer database, comparing the provider to dry Entity Framework Core.
+These historical SQL Server measurements compare DataQI with direct EF Core calls. They predate the 6.0 expression-based criteria rewrite and do not measure the current code or dependencies.
 
 The benchmarks can be found at [DataQI.EntityFrameworkCore.Benchmarks](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/tree/main/test/DataQI.EntityFrameworkCore.Benchmarks) (contributions welcome!) and can be run via:
 
 ```bash
-dotnet run --project .\test\DataQI.EntityFrameworkCore.Benchmarks\DataQI.EntityFrameworkCore.Benchmarks.csproj  -f net6.0 -c Release
+dotnet run --project .\test\DataQI.EntityFrameworkCore.Benchmarks\DataQI.EntityFrameworkCore.Benchmarks.csproj  -f net10.0 -c Release
 ```
+
+The recorded environment was BenchmarkDotNet 0.13.12 and .NET 6.0.3; the benchmark project now targets .NET 10.
 
 ```
 
@@ -414,15 +367,15 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 | Pure EfCore | Delete&lt;T&gt;      | Delete 1 row / op        |   10,000 |  9.193 ms | 3.7906 ms | 3.2916 ms |    6.0000 |        - |        - |   25.34 KB |
 | DataQI      | Delete&lt;T&gt;      | Delete 1 row / op        |   10,000 |  9.195 ms | 0.4882 ms | 0.4239 ms |    6.0000 |        - |        - |   24.54 KB |
 
-## Limitations and caveats
-
-The DataQI EntityFrameworkCore Provider library is not an ORM, or it attempts to solve all data persistence problems. It provides a structure based on Repository Pattern that facilitates the rapid creation of repositories with methods that allow the creation, modification and deletion of data, as well as the preparation of simple queries by signing the methods declared in an interface, in order to avoid most of the effort involved in writing standard code in projects that use the [EntityFrameworkCore](https://github.com/dotnet/efcore) library.
-
-## Criteria AST (6.0)
-
-`Find`/`FindAsync`/`FindOne`/`FindOneAsync` now turn criteria into an `Expression<Func<TEntity, bool>>` predicate that EF Core translates to SQL, instead of a Dynamic LINQ string, and apply ordering with `OrderBy`/`ThenBy` expressions. The public types of the old pipeline were removed: `EntityCriteria`, `EntityCommandBuilder`, `IEntityCommandBuilder`, `IEntityExpressionBuilder`, the `Entity*Expression` classes, `EntityCommand` and `EntityCriterionExtensions`. `Restrictions` and `Func<ICriteria, ICriteria>` usage is unchanged. `IsNull` on a non-nullable property now fails with a clear exception instead of silently matching nothing. See `DataQI.Commons`'s README for the breaking changes in the Commons API (`ICriterion`, `IOrderCriterion`, `Restrictions.StartingWith`).
-
 ## Release Notes
+
+**v6.0.0 - current source**
+
+- **Breaking Change!** Adopted the Commons 4.x criteria AST and removed the old public criteria and command-building types listed in the migration guide.
+- Change! Replaced Dynamic LINQ criteria strings with typed predicates and ordering expressions.
+- Change! Null tests on non-nullable properties now throw a clear exception.
+- New! Added XML documentation for public APIs.
+- Change! The library targets .NET 6 with EF Core 6.0.36; tests, samples, and benchmarks use .NET 10 and EF Core 10.0.13.
 
 **v5.0.0 - 2026/10**
 
@@ -433,43 +386,43 @@ The DataQI EntityFrameworkCore Provider library is not an ORM, or it attempts to
 
 **v4.0.0 - 2024/12**
 
-- New! Added support to perform queries by using linq query and expression builders
-- Change! Upgraded version of `DataQI.Commons` to the `2.0.0` to support new features
+- New! Added support for queries using LINQ query and expression builders
+- Change! Upgraded `DataQI.Commons` to `2.0.0` to support new features
 
 **v3.1.0 - 2023/01**
 
-- New! Added project to perform benchmarks
-- New! Added support to register repositories for Microsoft's Dependency Injection
-- New! Added sample project
+- New! Added a benchmark project
+- New! Added support for registering repositories with Microsoft's dependency injection container
+- New! Added a sample project
 
 **v3.0.0 - 2022/06**
 
-- Change! Updated minimum version of supported `EntityFrameworkCore` to the lastest 6th major version
+- Change! Updated the minimum supported EF Core version to 6.x
 
 **v2.1.0 - 2022/06**
 
-- Change! Updated minimum version of supported `EntityFrameworkCore` to the lastest 5th major version
+- Change! Updated the minimum supported EF Core version to 5.x
 
 **v2.0.0 - 2022/06**
 
-- Change! Added support to the `EntityFrameworkCore` latest 5th major version
+- Change! Added support for EF Core 5.x
 
 **v1.2.0 - 2022/06**
 
-- Change! Added support to the `EntityFrameworkCore` latest 3rd major version
-- Change! `EntityRepository` sets `EntityEntry.State` explicity to `EntityState.Modified` when change an `Entity`
+- Change! Added support for EF Core 3.x
+- Change! `EntityRepository` sets `EntityEntry.State` explicitly to `EntityState.Modified` when changing an entity
 
 **v1.1.0 - 2022/01**
 
-- New! Added support to the new `RepositoryFactory` features
-- New! Added the ability to invoke non-standard methods defined on a client
-- Change! `TEntity` requirements on generic interface `IEntityRepository`
-- **Breaking Change!** Removed `DbContext` as argument on `EntityRepositoryFactory` constructor
+- New! Added support for the new `RepositoryFactory` features
+- New! Added support for invoking custom methods defined by consumers
+- Change! Updated `TEntity` requirements on the generic `IEntityRepository` interface
+- **Breaking Change!** Removed the `DbContext` argument from the `EntityRepositoryFactory` constructor
 
 **v1.0.0 - 2020/09**
 
-- Provided initial core base
+- Initial release
 
 ## License
 
-DataQI EntityFrameworkCore is released under the [MIT License](https://opensource.org/licenses/MIT).
+DataQI EntityFrameworkCore is released under the [MIT License](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/blob/main/LICENSE).
