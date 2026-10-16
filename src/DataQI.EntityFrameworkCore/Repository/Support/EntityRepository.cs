@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 using DataQI.Commons.Query;
+using DataQI.Commons.Repository.Paging;
 using DataQI.Commons.Query.Support;
 using DataQI.Commons.Util;
 
@@ -165,6 +166,24 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         public Task<TEntity> FindOneAsync(Func<ICriteria, ICriteria> criteriaBuilder,
             CancellationToken cancellationToken = default)
             => CriteriaQuery(criteriaBuilder).SingleOrDefaultAsync(cancellationToken);
+
+        /// <inheritdoc />
+        public ISlice<TEntity> FindSlice(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
+            => throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public Task<ISlice<TEntity>> FindSliceAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
+            CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public IPage<TEntity> FindPage(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
+            => throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public Task<IPage<TEntity>> FindPageAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
+            CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
 
         private IQueryable<TEntity> CriteriaQuery(Func<ICriteria, ICriteria> criteriaBuilder)
         {

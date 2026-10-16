@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using DataQI.Commons.Repository;
+using DataQI.Commons.Repository.Paging;
 
 namespace DataQI.EntityFrameworkCore.Repository
 {
@@ -14,7 +15,7 @@ namespace DataQI.EntityFrameworkCore.Repository
     /// <typeparam name="TId">The identifier type of <typeparamref name="TEntity"/>.</typeparam>
     /// <remarks>In addition to the members of <see cref="ICrudRepository{TEntity, TId}"/>, it exposes LINQ based searches.</remarks>
     public interface IEntityRepository<TEntity, in TId> :
-        ICrudRepository<TEntity, TId> where TEntity : class
+        IPagedRepository<TEntity, TId> where TEntity : class
     {
         /// <summary>Gets a queryable over all entities for composing further LINQ operators.</summary>
         /// <returns>A deferred query using the context's default tracking behavior; nothing runs until it is enumerated.</returns>
