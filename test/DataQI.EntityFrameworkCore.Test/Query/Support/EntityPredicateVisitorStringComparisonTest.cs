@@ -144,7 +144,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 : repository.FindByNameGreaterThan("M");
             var ids = result.OrderBy(entity => entity.Id).Select(entity => entity.Id).ToArray();
 
-            Assert.Equal([2, 3], ids);
+            Assert.Equal(new[] { 2, 3 }, ids);
         }
 
         public void Dispose()

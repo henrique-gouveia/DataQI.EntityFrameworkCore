@@ -28,7 +28,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestOrdersAscendingBySingleProperty()
         {
-            List<IOrderCriterion> orders = [Order.Asc("Name")];
+            var orders = new List<IOrderCriterion> { Order.Asc("Name") };
             var result = EntityOrderedQueryBuilder<EntityOrderedQueryBuilderFakeEntity>
                 .BuildOrderedQuery(entities, orders).ToList();
 
@@ -40,7 +40,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestOrdersDescendingBySingleProperty()
         {
-            List<IOrderCriterion> orders = [Order.Desc("Stock")];
+            var orders = new List<IOrderCriterion> { Order.Desc("Stock") };
             var result = EntityOrderedQueryBuilder<EntityOrderedQueryBuilderFakeEntity>
                 .BuildOrderedQuery(entities, orders).ToList();
 
@@ -50,7 +50,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestOrdersByMultiplePropertiesInCallSequence()
         {
-            List<IOrderCriterion> orders = [Order.Asc("Name"), Order.Desc("Stock")];
+            var orders = new List<IOrderCriterion> { Order.Asc("Name"), Order.Desc("Stock") };
             var result = EntityOrderedQueryBuilder<EntityOrderedQueryBuilderFakeEntity>
                 .BuildOrderedQuery(entities, orders).ToList();
 
@@ -73,7 +73,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestRejectsUnknownPropertyWhenBuilding()
         {
-            List<IOrderCriterion> orders = [Order.Asc("DoesNotExist")];
+            var orders = new List<IOrderCriterion> { Order.Asc("DoesNotExist") };
 
             Assert.Throws<ArgumentException>(() =>
                 EntityOrderedQueryBuilder<EntityOrderedQueryBuilderFakeEntity>

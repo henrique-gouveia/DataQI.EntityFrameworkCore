@@ -212,14 +212,14 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 
         private IList<Product> InsertTestProductsList()
         {
-            List<Product> products =
-            [
+            var products = new List<Product>()
+            {
                 ProductBuilder.NewInstance().Build(),
                 ProductBuilder.NewInstance().Build(),
                 ProductBuilder.NewInstance().Build(),
                 ProductBuilder.NewInstance().Build(),
                 ProductBuilder.NewInstance().Build(),
-            ];
+            };
 
             products.ForEach(p =>
             {

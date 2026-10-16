@@ -522,7 +522,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 
         private sealed class QueryCommandInterceptor : DbCommandInterceptor
         {
-            public List<string> Commands { get; } = [];
+            public List<string> Commands { get; } = new List<string>();
 
             public override InterceptionResult<DbDataReader> ReaderExecuting(
                 DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result)
@@ -602,14 +602,14 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 
         private IList<Customer> InsertTestCustomersList()
         {
-            List<Customer> customers =
-            [
+            var customers = new List<Customer>()
+            {
                 CustomerBuilder.NewInstance().Build(),
                 CustomerBuilder.NewInstance().Build(),
                 CustomerBuilder.NewInstance().Build(),
                 CustomerBuilder.NewInstance().Build(),
                 CustomerBuilder.NewInstance().Build(),
-            ];
+            };
 
             customers.ForEach(p =>
             {
