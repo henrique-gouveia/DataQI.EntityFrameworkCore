@@ -30,7 +30,7 @@ dotnet add package DataQI.EntityFrameworkCore
 
 ### Defining a Repository
 
-Extend `IEntityRepository<TEntity, TId>` from `DataQI.EntityFrameworkCore.Repository`. `TEntity` is the mapped entity class; `TId` is the type of its single primary key. Identifier methods take that key value, for example `FindOne(1)` and `Delete(person.Id)`. Composite keys are not supported by these identifier methods.
+The provider combines the independent `ICrudRepository<TEntity, TId>` and `IPagedRepository<TEntity, TId>` contracts. Extend `IEntityRepository<TEntity, TId>` from `DataQI.EntityFrameworkCore.Repository`. `TEntity` is the mapped entity class; `TId` is the type of its single primary key. Identifier methods take that key value, for example `FindOne(1)` and `Delete(person.Id)`. Composite keys are not supported by these identifier methods.
 
 ```csharp
 [Table("Person")]
@@ -413,7 +413,7 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 **v6.0.0 - current source**
 
 - New! Add criteria and query-method paging through `ISlice<T>`, `IPage<T>` and `IPageRequest`.
-- Change! Provider repository interfaces now extend `IPagedRepository`; custom implementations must supply its four methods.
+- Change! The provider interface now combines independent CRUD and paging contracts; custom implementations must supply the four paging methods.
 - **Breaking Change!** Adopted the Commons 4.x criteria AST and removed the old public criteria and command-building types listed in the migration guide.
 - Change! Replaced Dynamic LINQ criteria strings with typed predicates and ordering expressions.
 - Change! Null tests on non-nullable properties now throw a clear exception.
