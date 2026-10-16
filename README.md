@@ -181,6 +181,36 @@ people = personRepository.FindByFirstNameAndLastNameOrBirthDateGreaterThan(
     "Ada", "Lovelace", new DateTime(1900, 1, 1));
 ```
 
+#### Paging
+
+Added to `IProductRepository` (import `DataQI.Commons.Repository.Paging`):
+
+```csharp
+ISlice<Product> FindByDepartmentOrderByNameAsc(string department, IPageRequest page);
+Task<IPage<Product>> FindByDepartmentAsync(
+    string department, IPageRequest page, CancellationToken cancellationToken = default);
+```
+
+```csharp
+var request = PageRequest.Of(0, 20, Order.Asc(nameof(Product.Name)));
+var slice = repository.FindSlice(c => c
+    .Add(Restrictions.Equal(nameof(Product.Department), "D1")), request);
+var page = repository.FindPage(c => c, request);
+var namedSlice = repository.FindByDepartmentOrderByNameAsc("D1", request);
+var namedPage = await repository.FindByDepartmentAsync("D1", request, cancellationToken);
+var asyncSlice = await repository.FindSliceAsync(c => c, request, cancellationToken);
+```
+
+`PageIndex` is zero-based. `ISlice<T>` includes read-only `Items`, `HasNext` and `HasPrevious`; `IPage<T>` adds `long TotalCount` and `long TotalPages`. Slice uses one query and is the recommended default. Page runs `COUNT` only when needed: a partial page with items, or an empty first page, reveals the total. An empty page beyond the end still counts matching rows.
+
+Page items and total can come from two non-atomic queries; wrap the operation in a transaction if consistency matters. Clients should cap `PageSize`; deep `OFFSET` degrades performance. Requests require a positive size below `int.MaxValue` and an offset no larger than `int.MaxValue`; a null request throws `ArgumentException`.
+
+Ordering follows method-name `OrderBy`, criteria `AddOrder`, then `page.Orders`, keeping the first occurrence of each property. Missing primary-key properties are appended ascending for stable ties. `NULL` ordering depends on the database. An entity without a key needs an explicit order.
+
+Paging query methods require exactly one `IPageRequest` as the last non-token parameter and a matching slice/page return type. An optional `CancellationToken` belongs last; async methods forward it to the provider. Invalid parsed-query signatures fail at proxy creation. See the [Commons query contracts](https://github.com/henrique-gouveia/DataQI.Commons#paging) for the full rules.
+
+EF Core forwards `CancellationToken` to asynchronous reads and counts. Shadow and composite primary keys also complete the ordering.
+
 ### Using Async Query Methods
 
 Return `Task<IEnumerable<Person>>` or `Task<Person>` to run a query asynchronously. The return type selects synchronous or asynchronous execution; a trailing `Async` in the name is optional. A final `CancellationToken` is forwarded to asynchronous EF Core queries.
@@ -368,6 +398,12 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 | DataQI      | Delete&lt;T&gt;      | Delete 1 row / op        |   10,000 |  9.195 ms | 0.4882 ms | 0.4239 ms |    6.0000 |        - |        - |   24.54 KB |
 
 ## Release Notes
+
+**6.0.0-preview.3**
+
+- Add criteria and query-method paging through `ISlice<T>`, `IPage<T>` and `IPageRequest`.
+- Provider repository interfaces now extend `IPagedRepository`; custom implementations must supply its four methods.
+
 
 **v6.0.0 - current source**
 
