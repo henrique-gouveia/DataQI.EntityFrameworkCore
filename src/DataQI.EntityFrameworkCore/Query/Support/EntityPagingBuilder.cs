@@ -26,9 +26,12 @@ namespace DataQI.EntityFrameworkCore.Query.Support
             foreach (var order in orders)
             {
                 var key = keys.FirstOrDefault(k => k.Name == order.PropertyName);
-                Expression property = typeof(TEntity).GetProperty(order.PropertyName) == null && key.ClrType != null
+                var clrProperty = typeof(TEntity).GetProperty(order.PropertyName);
+                if (clrProperty == null && key.ClrType == null)
+                    throw new InvalidOperationException($"Cannot order {typeof(TEntity).Name} by unknown property '{order.PropertyName}'.");
+                Expression property = clrProperty == null
                     ? Expression.Call(typeof(EF), nameof(EF.Property), new[] { key.ClrType }, parameter, Expression.Constant(order.PropertyName))
-                    : Expression.Property(parameter, order.PropertyName);
+                    : Expression.Property(parameter, clrProperty);
                 var method = order.Direction == OrderDirection.Asc
                     ? (first ? "OrderBy" : "ThenBy") : (first ? "OrderByDescending" : "ThenByDescending");
                 expression = Expression.Call(typeof(Queryable), method, new[] { typeof(TEntity), property.Type },

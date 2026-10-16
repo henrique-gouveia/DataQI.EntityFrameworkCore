@@ -220,9 +220,15 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         }
 
         [Fact]
-        public void TestUnknownOrderPropertyFails()
+        public async Task TestUnknownOrderPropertyFails()
         {
-            Assert.Throws<TargetInvocationException>(() => repository.FindSlice(c => c, PageRequest.Of(0, 10, Order.Asc("Nope"))));
+            var page = PageRequest.Of(0, 10, Order.Asc("Nope"));
+            const string message = "Cannot order Product by unknown property 'Nope'.";
+
+            Assert.Equal(message, Assert.Throws<InvalidOperationException>(() => direct.FindSlice(c => c, page)).Message);
+            Assert.Equal(message, Assert.Throws<InvalidOperationException>(() => direct.FindPage(c => c, page)).Message);
+            Assert.Equal(message, (await Assert.ThrowsAsync<InvalidOperationException>(() => direct.FindSliceAsync(c => c, page))).Message);
+            Assert.Equal(message, (await Assert.ThrowsAsync<InvalidOperationException>(() => direct.FindPageAsync(c => c, page))).Message);
         }
 
         [Fact]
@@ -268,7 +274,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             await repo.FindPageAsync(c => c, PageRequest.Of(0, 10));
             Assert.Equal(2, counter.Count);
             counter.Count = 0;
-            Assert.Throws<ArgumentException>(() => repo.FindSlice(c => c, PageRequest.Of(0, 10, Order.Asc("Nope"))));
+            Assert.Throws<InvalidOperationException>(() => repo.FindSlice(c => c, PageRequest.Of(0, 10, Order.Asc("Nope"))));
             Assert.Equal(0, counter.Count);
         }
 

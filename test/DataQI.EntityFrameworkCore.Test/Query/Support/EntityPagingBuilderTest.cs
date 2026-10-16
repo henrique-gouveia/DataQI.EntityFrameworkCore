@@ -64,7 +64,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestBuildPagedQueryStillFailsForAnUnknownOrderProperty()
         {
-            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.BuildPagedQuery(
+            Assert.Throws<InvalidOperationException>(() => EntityPagingBuilder<Product>.BuildPagedQuery(
                 context.Set<Product>(), new[] { Order.Asc("Nope") }, [], 0, 10));
         }
 
