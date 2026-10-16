@@ -16,7 +16,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             var context = new ShadowKeyContext(connection);
             context.Database.EnsureCreated();
             for (var i = 0; i < rows; i++)
-                context.Add(new ShadowKeyEntity { Name = "Same" });
+                context.Add(new ShadowKeyEntity { Name = "Same", Marker = i });
             context.SaveChanges();
             context.ChangeTracker.Clear();
             return context;

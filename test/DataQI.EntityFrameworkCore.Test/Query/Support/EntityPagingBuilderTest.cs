@@ -113,6 +113,28 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 new CustomPageRequest(0, 10, 0, new[] { Order.Asc("") })));
         }
 
+        [Theory]
+        [InlineData(null, OrderDirection.Asc)]
+        [InlineData("", OrderDirection.Asc)]
+        [InlineData("   ", OrderDirection.Asc)]
+        [InlineData("Name", (OrderDirection)123)]
+        public void TestEnsurePageRejectsInvalidCustomOrders(string name, OrderDirection direction)
+        {
+            var page = new CustomPageRequest(0, 10, 0, new IOrderCriterion[] { new CustomOrder(name, direction) });
+            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.EnsurePage(page));
+        }
+
+        private sealed class CustomOrder : IOrderCriterion
+        {
+            public CustomOrder(string name, OrderDirection direction)
+            {
+                PropertyName = name;
+                Direction = direction;
+            }
+            public string PropertyName { get; }
+            public OrderDirection Direction { get; }
+        }
+
         [Fact]
         public void TestKeyPropertiesComeFromTheModel()
         {

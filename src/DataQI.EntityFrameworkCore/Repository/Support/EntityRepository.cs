@@ -169,31 +169,71 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
 
         /// <inheritdoc />
         public ISlice<TEntity> FindSlice(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
-            => throw new NotImplementedException();
+        {
+            var (window, _) = WindowQuery(criteriaBuilder, page, 1);
+            return ToSlice(window.ToList(), page);
+        }
 
         /// <inheritdoc />
-        public Task<ISlice<TEntity>> FindSliceAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
+        public async Task<ISlice<TEntity>> FindSliceAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
             CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+        {
+            var (window, _) = WindowQuery(criteriaBuilder, page, 1);
+            return ToSlice(await window.ToListAsync(cancellationToken), page);
+        }
 
         /// <inheritdoc />
+        /// <remarks>The page and total may require two non-atomic queries. Use a transaction when consistency matters.</remarks>
         public IPage<TEntity> FindPage(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
-            => throw new NotImplementedException();
+        {
+            var (window, filtered) = WindowQuery(criteriaBuilder, page, 0);
+            var items = window.ToList();
+            var total = EntityPagingBuilder<TEntity>.DeduceTotal(items.Count, page) ?? filtered.LongCount();
+            return new Page<TEntity>(items, page.PageIndex, page.PageSize, total);
+        }
 
         /// <inheritdoc />
-        public Task<IPage<TEntity>> FindPageAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
+        /// <remarks>The page and total may require two non-atomic queries. Use a transaction when consistency matters.</remarks>
+        public async Task<IPage<TEntity>> FindPageAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
             CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+        {
+            var (window, filtered) = WindowQuery(criteriaBuilder, page, 0);
+            var items = await window.ToListAsync(cancellationToken);
+            var total = EntityPagingBuilder<TEntity>.DeduceTotal(items.Count, page)
+                ?? await filtered.LongCountAsync(cancellationToken);
+            return new Page<TEntity>(items, page.PageIndex, page.PageSize, total);
+        }
 
-        private IQueryable<TEntity> CriteriaQuery(Func<ICriteria, ICriteria> criteriaBuilder)
+        private static ISlice<TEntity> ToSlice(List<TEntity> items, IPageRequest page)
+        {
+            var hasNext = items.Count > page.PageSize;
+            if (hasNext)
+                items.RemoveAt(items.Count - 1);
+            return new Slice<TEntity>(items, page.PageIndex, page.PageSize, hasNext);
+        }
+
+        private (IQueryable<TEntity> Window, IQueryable<TEntity> Filtered) WindowQuery(
+            Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page, int extra)
+        {
+            EntityPagingBuilder<TEntity>.EnsurePage(page);
+            var (criteria, filtered) = FilteredQuery(criteriaBuilder);
+            var keys = EntityPagingBuilder<TEntity>.KeyProperties(context);
+            var orders = EntityPagingBuilder<TEntity>.MergeOrders(criteria.Orders, page, keys.Select(k => k.Name));
+            return (EntityPagingBuilder<TEntity>.Window(filtered, orders, keys, (int)page.Offset, page.PageSize + extra), filtered);
+        }
+
+        private (ICriteria Criteria, IQueryable<TEntity> Filtered) FilteredQuery(Func<ICriteria, ICriteria> criteriaBuilder)
         {
             Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
             var criteria = criteriaBuilder(new Criteria());
-
             var predicate = EntityPredicateVisitor<TEntity>.BuildPredicate(criteria);
-            var query = context.Set<TEntity>().AsNoTracking().Where(predicate);
+            return (criteria, context.Set<TEntity>().AsNoTracking().Where(predicate));
+        }
 
-            return EntityOrderedQueryBuilder<TEntity>.BuildOrderedQuery(query, criteria.Orders);
+        private IQueryable<TEntity> CriteriaQuery(Func<ICriteria, ICriteria> criteriaBuilder)
+        {
+            var (criteria, filtered) = FilteredQuery(criteriaBuilder);
+            return EntityOrderedQueryBuilder<TEntity>.BuildOrderedQuery(filtered, criteria.Orders);
         }
 
         /// <inheritdoc />

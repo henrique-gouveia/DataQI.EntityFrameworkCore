@@ -2,6 +2,7 @@ using System.Linq;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 using DataQI.EntityFrameworkCore.Test.Repository.Customers;
 using DataQI.EntityFrameworkCore.Test.Repository.Employees;
@@ -24,6 +25,13 @@ namespace DataQI.EntityFrameworkCore.Test
             var context = new TestContext(optionsBuilder.Options);
 
             return context;
+        }
+
+        public static TestContext NewInstance(string dbName, IInterceptor interceptor)
+        {
+            var connection = new SqliteConnection($"Data Source={dbName}");
+            var optionsBuilder = new DbContextOptionsBuilder().UseSqlite(connection).AddInterceptors(interceptor);
+            return new TestContext(optionsBuilder.Options);
         }
 
         private bool TryCreateDabase()
