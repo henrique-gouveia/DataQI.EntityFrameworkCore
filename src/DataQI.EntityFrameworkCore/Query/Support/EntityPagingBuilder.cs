@@ -43,10 +43,10 @@ namespace DataQI.EntityFrameworkCore.Query.Support
         public static IReadOnlyList<(string Name, Type ClrType)> KeyProperties(DbContext context)
         {
             var key = context.Model.FindEntityType(typeof(TEntity))?.FindPrimaryKey();
-            return key == null ? new (string, Type)[0] : key.Properties.Select(p => (p.Name, p.ClrType)).ToArray();
+            return key == null ? Array.Empty<(string, Type)>() : key.Properties.Select(p => (p.Name, p.ClrType)).ToArray();
         }
 
-        public static IQueryable<TEntity> Window(IQueryable<TEntity> filtered, IReadOnlyList<IOrderCriterion> orders,
+        public static IQueryable<TEntity> BuildPagedQuery(IQueryable<TEntity> filtered, IReadOnlyList<IOrderCriterion> orders,
             IReadOnlyList<(string Name, Type ClrType)> keys, int skip, int take)
         {
             var parameter = Expression.Parameter(typeof(TEntity), "e");

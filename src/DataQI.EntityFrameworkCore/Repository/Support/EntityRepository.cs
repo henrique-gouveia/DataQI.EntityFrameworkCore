@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 using DataQI.Commons.Query;
 using DataQI.Commons.Repository.Paging;
+using DataQI.Commons.Repository.Paging.Support;
 using DataQI.Commons.Query.Support;
 using DataQI.Commons.Util;
 
@@ -170,24 +171,24 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         /// <inheritdoc />
         public ISlice<TEntity> FindSlice(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
         {
-            var (window, _) = WindowQuery(criteriaBuilder, page, 1);
-            return ToSlice(window.ToList(), page);
+            var (pagedQuery, _) = PagedQuery(criteriaBuilder, page, 1);
+            return ToSlice(pagedQuery.ToList(), page);
         }
 
         /// <inheritdoc />
         public async Task<ISlice<TEntity>> FindSliceAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
             CancellationToken cancellationToken = default)
         {
-            var (window, _) = WindowQuery(criteriaBuilder, page, 1);
-            return ToSlice(await window.ToListAsync(cancellationToken), page);
+            var (pagedQuery, _) = PagedQuery(criteriaBuilder, page, 1);
+            return ToSlice(await pagedQuery.ToListAsync(cancellationToken), page);
         }
 
         /// <inheritdoc />
         /// <remarks>The page and total may require two non-atomic queries. Use a transaction when consistency matters.</remarks>
         public IPage<TEntity> FindPage(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
         {
-            var (window, filtered) = WindowQuery(criteriaBuilder, page, 0);
-            var items = window.ToList();
+            var (pagedQuery, filtered) = PagedQuery(criteriaBuilder, page, 0);
+            var items = pagedQuery.ToList();
             var total = EntityPagingBuilder<TEntity>.DeduceTotal(items.Count, page) ?? filtered.LongCount();
             return new Page<TEntity>(items, page.PageIndex, page.PageSize, total);
         }
@@ -197,8 +198,8 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         public async Task<IPage<TEntity>> FindPageAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
             CancellationToken cancellationToken = default)
         {
-            var (window, filtered) = WindowQuery(criteriaBuilder, page, 0);
-            var items = await window.ToListAsync(cancellationToken);
+            var (pagedQuery, filtered) = PagedQuery(criteriaBuilder, page, 0);
+            var items = await pagedQuery.ToListAsync(cancellationToken);
             var total = EntityPagingBuilder<TEntity>.DeduceTotal(items.Count, page)
                 ?? await filtered.LongCountAsync(cancellationToken);
             return new Page<TEntity>(items, page.PageIndex, page.PageSize, total);
@@ -212,14 +213,14 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             return new Slice<TEntity>(items, page.PageIndex, page.PageSize, hasNext);
         }
 
-        private (IQueryable<TEntity> Window, IQueryable<TEntity> Filtered) WindowQuery(
+        private (IQueryable<TEntity> Query, IQueryable<TEntity> Filtered) PagedQuery(
             Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page, int extra)
         {
             EntityPagingBuilder<TEntity>.EnsurePage(page);
             var (criteria, filtered) = FilteredQuery(criteriaBuilder);
             var keys = EntityPagingBuilder<TEntity>.KeyProperties(context);
             var orders = EntityPagingBuilder<TEntity>.MergeOrders(criteria.Orders, page, keys.Select(k => k.Name));
-            return (EntityPagingBuilder<TEntity>.Window(filtered, orders, keys, (int)page.Offset, page.PageSize + extra), filtered);
+            return (EntityPagingBuilder<TEntity>.BuildPagedQuery(filtered, orders, keys, (int)page.Offset, page.PageSize + extra), filtered);
         }
 
         private (ICriteria Criteria, IQueryable<TEntity> Filtered) FilteredQuery(Func<ICriteria, ICriteria> criteriaBuilder)

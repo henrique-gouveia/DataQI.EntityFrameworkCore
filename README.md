@@ -7,6 +7,17 @@ DataQI EntityFrameworkCore creates repository implementations from C# interfaces
 [![NuGet](https://img.shields.io/nuget/v/DataQI.EntityFrameworkCore.svg)](https://www.nuget.org/packages/DataQI.EntityFrameworkCore/)
 [![License](https://img.shields.io/github/license/henrique-gouveia/DataQI.EntityFrameworkCore.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/blob/main/LICENSE)
 
+## Features
+
+- Synchronous and asynchronous CRUD operations backed by EF Core, with cancellation support.
+- Repositories declared as C# interfaces, with query methods derived from method names.
+- Criteria with comparisons, text matches, logical groups, and ordering.
+- Collection and single-entity queries, plus paging with `ISlice<T>` and `IPage<T>`.
+- Deterministic paging order with primary-key tie-breaks and total counts only when needed.
+- LINQ predicates and query builders for custom queries over `IQueryable<TEntity>`.
+- Repository factories, custom implementations, and Microsoft dependency injection integration.
+- Query-method completion through the transitive DataQI.Analyzers dependency.
+
 ## Getting Started
 
 ### Installing
@@ -183,7 +194,7 @@ people = personRepository.FindByFirstNameAndLastNameOrBirthDateGreaterThan(
 
 #### Paging
 
-Added to `IProductRepository` (import `DataQI.Commons.Repository.Paging`):
+Added to `IProductRepository` (import `DataQI.Commons.Repository.Paging` and `DataQI.Commons.Repository.Paging.Support`):
 
 ```csharp
 ISlice<Product> FindByDepartmentOrderByNameAsc(string department, IPageRequest page);
@@ -399,14 +410,10 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 
 ## Release Notes
 
-**6.0.0-preview.3**
-
-- Add criteria and query-method paging through `ISlice<T>`, `IPage<T>` and `IPageRequest`.
-- Provider repository interfaces now extend `IPagedRepository`; custom implementations must supply its four methods.
-
-
 **v6.0.0 - current source**
 
+- New! Add criteria and query-method paging through `ISlice<T>`, `IPage<T>` and `IPageRequest`.
+- Change! Provider repository interfaces now extend `IPagedRepository`; custom implementations must supply its four methods.
 - **Breaking Change!** Adopted the Commons 4.x criteria AST and removed the old public criteria and command-building types listed in the migration guide.
 - Change! Replaced Dynamic LINQ criteria strings with typed predicates and ordering expressions.
 - Change! Null tests on non-nullable properties now throw a clear exception.

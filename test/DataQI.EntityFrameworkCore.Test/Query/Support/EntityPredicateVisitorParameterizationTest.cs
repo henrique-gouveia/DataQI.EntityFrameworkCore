@@ -116,12 +116,12 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             var compilationCount = 0;
             using (var context = NewContext(message => compilationCount++))
             {
-                var firstValues = propertyName == "Id"
-                    ? new object[] { 10, 15 }
-                    : new object[] { "Adams", "Barnes" };
-                var secondValues = propertyName == "Id"
-                    ? (differentLength ? new object[] { 20, 25, 30 } : new object[] { 20, 25 })
-                    : (differentLength ? new object[] { "Miller", "Smith", "Zulu" } : new object[] { "Miller", "Smith" });
+                object[] firstValues = propertyName == "Id"
+                    ? [10, 15]
+                    : ["Adams", "Barnes"];
+                object[] secondValues = propertyName == "Id"
+                    ? (differentLength ? new object[] { 20, 25, 30 } : [20, 25])
+                    : (differentLength ? new object[] { "Miller", "Smith", "Zulu" } : ["Miller", "Smith"]);
 
                 InQuery(context, propertyName, firstValues).ToQueryString();
                 Assert.Equal(1, compilationCount);
@@ -140,9 +140,9 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             var compilationCount = 0;
             using (var context = NewContext(message => compilationCount++))
             {
-                var values = propertyName == "Id"
-                    ? new object[] { 10, 15 }
-                    : new object[] { "Adams", "Barnes" };
+                object[] values = propertyName == "Id"
+                    ? [10, 15]
+                    : ["Adams", "Barnes"];
                 var query = InQuery(context, propertyName, values);
 
                 query.ToQueryString();
@@ -159,9 +159,9 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [InlineData("Name", typeof(string[]))]
         public void TestInDoesNotEmbedCollectionAsConstant(string propertyName, Type expectedType)
         {
-            var values = propertyName == "Id"
-                ? new object[] { 10, 15 }
-                : new object[] { "Adams", "Barnes" };
+            object[] values = propertyName == "Id"
+                ? [10, 15]
+                : ["Adams", "Barnes"];
             var criteria = new Criteria().Add(Restrictions.In(propertyName, values));
             var predicate = EntityPredicateVisitor<Product>.BuildPredicate(criteria);
             var contains = Assert.IsAssignableFrom<MethodCallExpression>(predicate.Body);
@@ -255,8 +255,8 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [InlineData("Name")]
         public void TestCapturedInValuesRemainIndependentBetweenPredicates(string propertyName)
         {
-            var firstValues = propertyName == "Id" ? new object[] { 10 } : new object[] { "Adams" };
-            var secondValues = propertyName == "Id" ? new object[] { 20 } : new object[] { "Barnes" };
+            object[] firstValues = propertyName == "Id" ? [10] : ["Adams"];
+            object[] secondValues = propertyName == "Id" ? [20] : ["Barnes"];
             var first = EntityPredicateVisitor<Product>.BuildPredicate(
                 new Criteria().Add(Restrictions.In(propertyName, firstValues)));
             var second = EntityPredicateVisitor<Product>.BuildPredicate(

@@ -13,11 +13,11 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
 {
     public class EntityPredicateVisitorTest
     {
-        private readonly FakeEntity[] entities = new[]
-        {
+        private readonly FakeEntity[] entities =
+        [
             new FakeEntity { Name = "Adams", Stock = 10m, BirthDate = new DateTime(1990, 1, 1), Email = "adams@example.com" },
             new FakeEntity { Name = "Barnes", Stock = 30m, BirthDate = new DateTime(1985, 6, 1), Email = null },
-        };
+        ];
 
         [Fact]
         public void TestComparisonMatchesCorrectly()
@@ -68,7 +68,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestInCoercesMismatchedNumericType()
         {
-            var predicate = Compile(new Criteria().Add(Restrictions.In("Stock", new object[] { 10, 30 })));
+            var predicate = Compile(new Criteria().Add(Restrictions.In("Stock", [10, 30])));
 
             Assert.Equal(2, entities.Count(predicate));
         }
@@ -76,7 +76,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestInMatchesCorrectly()
         {
-            var criteria = new Criteria().Add(Restrictions.In("Name", new object[] { "Adams" }));
+            var criteria = new Criteria().Add(Restrictions.In("Name", ["Adams"]));
             var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
 
             Assert.Single(entities.Where(predicate));
@@ -302,7 +302,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             AssertNotMatches(Restrictions.Containing("Name", "dam"), "Barnes");
             AssertNotMatches(Restrictions.Like("Name", "arn"), "Adams");
             AssertNotMatches(Restrictions.Equal("Name", "Adams"), "Barnes");
-            AssertNotMatches(Restrictions.In("Name", new object[] { "Adams" }), "Barnes");
+            AssertNotMatches(Restrictions.In("Name", ["Adams"]), "Barnes");
             AssertNotMatches(Restrictions.Null("Email"), "Adams");
         }
 

@@ -11,23 +11,29 @@ using Xunit;
 using DataQI.Commons.Query;
 using DataQI.Commons.Query.Support;
 using DataQI.Commons.Repository.Paging;
+using DataQI.Commons.Repository.Paging.Support;
 using DataQI.EntityFrameworkCore.Repository.Support;
 using DataQI.EntityFrameworkCore.Test.Repository.Products;
+using DataQI.EntityFrameworkCore.Test.Fixtures;
 using DataQI.EntityFrameworkCore.Test.Query.Support;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository
 {
-    public class EntityRepositoryPagingTest : IDisposable
+    [Collection(nameof(DatabaseCollection))]
+    public class EntityRepositoryPagingTest : IClassFixture<DbFixture>, IDisposable
     {
         private readonly TestContext context;
         private readonly IProductRepository repository;
         private readonly EntityRepository<Product, int> direct;
 
-        public EntityRepositoryPagingTest()
+        public EntityRepositoryPagingTest(DbFixture fixture)
         {
-            context = TestContext.NewInstance("dbtest-paging.s3db");
-            repository = new EntityRepositoryFactory().GetRepository<IProductRepository>(context);
+            context = fixture.ProductContext;
+            repository = fixture.ProductRepository;
             direct = new EntityRepository<Product, int>(context);
+            context.ClearProducts();
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
             Seed(25);
         }
 
@@ -205,8 +211,8 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         [Fact]
         public void TestCustomPageRequestWithInvalidValuesIsRejected()
         {
-            foreach (var page in new[] { new CustomPageRequest(0, 0, 0, Array.Empty<IOrderCriterion>()),
-                new CustomPageRequest(2, 10, 5, Array.Empty<IOrderCriterion>()) })
+            foreach (var page in new[] { new CustomPageRequest(0, 0, 0, []),
+                new CustomPageRequest(2, 10, 5, []) })
             {
                 Assert.Throws<ArgumentException>(() => direct.FindSlice(c => c, page));
                 Assert.Throws<ArgumentException>(() => direct.FindPage(c => c, page));
@@ -241,38 +247,29 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         public async Task TestSliceRunsOneCommandAndPageDeducesTheTotal()
         {
             var counter = new CommandCounter();
-            using var counted = TestContext.NewInstance("dbtest-paging-commands.s3db", counter);
-            try
-            {
-                counted.Products.AddRange(context.Products.AsNoTracking().ToList());
-                counted.SaveChanges();
-                var repo = new EntityRepository<Product, int>(counted);
-                counter.Count = 0;
-                repo.FindSlice(c => c, PageRequest.Of(0, 10));
-                Assert.Equal(1, counter.Count);
-                counter.Count = 0;
-                Assert.Equal(25, repo.FindPage(c => c, PageRequest.Of(2, 10)).TotalCount);
-                Assert.Equal(1, counter.Count);
-                counter.Count = 0;
-                Assert.Equal(25, repo.FindPage(c => c, PageRequest.Of(0, 10)).TotalCount);
-                Assert.Equal(2, counter.Count);
-                counter.Count = 0;
-                await repo.FindSliceAsync(c => c, PageRequest.Of(0, 10));
-                Assert.Equal(1, counter.Count);
-                counter.Count = 0;
-                await repo.FindPageAsync(c => c, PageRequest.Of(2, 10));
-                Assert.Equal(1, counter.Count);
-                counter.Count = 0;
-                await repo.FindPageAsync(c => c, PageRequest.Of(0, 10));
-                Assert.Equal(2, counter.Count);
-                counter.Count = 0;
-                Assert.Throws<ArgumentException>(() => repo.FindSlice(c => c, PageRequest.Of(0, 10, Order.Asc("Nope"))));
-                Assert.Equal(0, counter.Count);
-            }
-            finally
-            {
-                counted.Database.EnsureDeleted();
-            }
+            using var counted = TestContext.NewInstance(interceptor: counter);
+            var repo = new EntityRepository<Product, int>(counted);
+            counter.Count = 0;
+            repo.FindSlice(c => c, PageRequest.Of(0, 10));
+            Assert.Equal(1, counter.Count);
+            counter.Count = 0;
+            Assert.Equal(25, repo.FindPage(c => c, PageRequest.Of(2, 10)).TotalCount);
+            Assert.Equal(1, counter.Count);
+            counter.Count = 0;
+            Assert.Equal(25, repo.FindPage(c => c, PageRequest.Of(0, 10)).TotalCount);
+            Assert.Equal(2, counter.Count);
+            counter.Count = 0;
+            await repo.FindSliceAsync(c => c, PageRequest.Of(0, 10));
+            Assert.Equal(1, counter.Count);
+            counter.Count = 0;
+            await repo.FindPageAsync(c => c, PageRequest.Of(2, 10));
+            Assert.Equal(1, counter.Count);
+            counter.Count = 0;
+            await repo.FindPageAsync(c => c, PageRequest.Of(0, 10));
+            Assert.Equal(2, counter.Count);
+            counter.Count = 0;
+            Assert.Throws<ArgumentException>(() => repo.FindSlice(c => c, PageRequest.Of(0, 10, Order.Asc("Nope"))));
+            Assert.Equal(0, counter.Count);
         }
 
         [Fact]
@@ -281,7 +278,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             using var shadow = ShadowKeyContext.CreateSeeded(25);
             var repo = new EntityRepository<ShadowKeyEntity, int>(shadow);
             var sync = Enumerable.Range(0, 3).SelectMany(i => repo.FindSlice(c => c, PageRequest.Of(i, 10)).Items).ToArray();
-            var asyncRows = new List<ShadowKeyEntity>();
+            List<ShadowKeyEntity> asyncRows = [];
             for (var i = 0; i < 3; i++)
                 asyncRows.AddRange((await repo.FindPageAsync(c => c, PageRequest.Of(i, 10))).Items);
             Assert.Equal(25, sync.Length);
@@ -297,7 +294,7 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             var repo = new EntityRepository<CompositeKeyEntity, int>(composite);
             var sync = Enumerable.Range(0, 3).SelectMany(i => repo.FindSlice(c => c, PageRequest.Of(i, 10, Order.Asc("Name"))).Items)
                 .Select(e => (e.A, e.B)).ToArray();
-            var asyncKeys = new List<(int, int)>();
+            List<(int, int)> asyncKeys = [];
             for (var i = 0; i < 3; i++)
                 asyncKeys.AddRange((await repo.FindPageAsync(c => c, PageRequest.Of(i, 10))).Items.Select(e => (e.A, e.B)));
             Assert.Equal(25, sync.Distinct().Count());
@@ -329,8 +326,9 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
 
         public void Dispose()
         {
-            context.Database.EnsureDeleted();
-            context.Dispose();
+            context.ClearProducts();
+            context.SaveChanges();
+            context.ChangeTracker.Clear();
         }
 
         private sealed class CommandCounter : DbCommandInterceptor

@@ -17,21 +17,16 @@ namespace DataQI.EntityFrameworkCore.Test
             TryCreateDabase();
         }
 
-        public static TestContext NewInstance(string dbName = "dbtest.s3db")
+        public static TestContext NewInstance(string dbName = "dbtest.s3db", IInterceptor interceptor = null)
         {
             var connection = new SqliteConnection($"Data Source={dbName}");
             var optionsBuilder = new DbContextOptionsBuilder().UseSqlite(connection);
+            if (interceptor != null)
+                optionsBuilder.AddInterceptors(interceptor);
 
             var context = new TestContext(optionsBuilder.Options);
 
             return context;
-        }
-
-        public static TestContext NewInstance(string dbName, IInterceptor interceptor)
-        {
-            var connection = new SqliteConnection($"Data Source={dbName}");
-            var optionsBuilder = new DbContextOptionsBuilder().UseSqlite(connection).AddInterceptors(interceptor);
-            return new TestContext(optionsBuilder.Options);
         }
 
         private bool TryCreateDabase()

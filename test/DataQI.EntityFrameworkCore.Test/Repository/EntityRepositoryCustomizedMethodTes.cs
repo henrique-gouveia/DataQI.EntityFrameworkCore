@@ -65,14 +65,14 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             employeeRepository.InsertDepartment(salesDepartment);
             employeeContext.SaveChanges();
 
-            var employees = new List<Employee>()
-            {
+            List<Employee> employees =
+            [
                 EmployeeBuilder.NewInstance().SetDepartment(productionDepartment).Build(),
                 EmployeeBuilder.NewInstance().SetDepartment(productionDepartment).Build(),
                 EmployeeBuilder.NewInstance().SetDepartment(productionDepartment).Build(),
                 EmployeeBuilder.NewInstance().SetDepartment(salesDepartment).Build(),
                 EmployeeBuilder.NewInstance().SetDepartment(salesDepartment).Build(),
-            };
+            ];
 
             employees.ForEach(o => InsertTestEmployee(o));
 

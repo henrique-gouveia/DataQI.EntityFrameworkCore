@@ -54,7 +54,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [InlineData("NullableStatus")]
         public void TestInCoercesEnumNumbers(string propertyName)
         {
-            var criteria = new Criteria().Add(Restrictions.In(propertyName, new object[] { 1 }));
+            var criteria = new Criteria().Add(Restrictions.In(propertyName, [1]));
             var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
 
             Assert.True(predicate(NewEntity()));
@@ -66,7 +66,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [InlineData("NullableExternalId")]
         public void TestInCoercesGuidStrings(string propertyName)
         {
-            var criteria = new Criteria().Add(Restrictions.In(propertyName, new object[] { externalId.ToString() }));
+            var criteria = new Criteria().Add(Restrictions.In(propertyName, [externalId.ToString()]));
             var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
 
             Assert.True(predicate(NewEntity()));
@@ -78,7 +78,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [InlineData("NullableTimestamp")]
         public void TestInCoercesDateTimeOffsetStrings(string propertyName)
         {
-            var criteria = new Criteria().Add(Restrictions.In(propertyName, new object[] { "2026-10-09T12:30:00-03:00" }));
+            var criteria = new Criteria().Add(Restrictions.In(propertyName, ["2026-10-09T12:30:00-03:00"]));
             var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
 
             Assert.True(predicate(NewEntity()));
@@ -149,7 +149,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestInvalidValueFormatPreservesFormatException(string propertyName, string value, bool useIn)
         {
             var criteria = new Criteria().Add(useIn
-                ? Restrictions.In(propertyName, new object[] { value })
+                ? Restrictions.In(propertyName, [value])
                 : Restrictions.Equal(propertyName, value));
 
             Assert.Throws<FormatException>(() => EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria));
@@ -162,7 +162,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         {
             var value = "79228162514264337593543950336";
             var criteria = new Criteria().Add(useIn
-                ? Restrictions.In("Amount", new object[] { value })
+                ? Restrictions.In("Amount", [value])
                 : Restrictions.Equal("Amount", value));
 
             Assert.Throws<OverflowException>(() => EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria));
@@ -174,7 +174,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestUnsupportedValueConversionPreservesInvalidCastException(bool useIn)
         {
             var criteria = new Criteria().Add(useIn
-                ? Restrictions.In("ExternalId", new object[] { 1 })
+                ? Restrictions.In("ExternalId", [1])
                 : Restrictions.Equal("ExternalId", 1));
 
             Assert.Throws<InvalidCastException>(() => EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria));

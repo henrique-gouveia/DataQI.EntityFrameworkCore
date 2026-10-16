@@ -5,13 +5,23 @@ using Xunit;
 using DataQI.Commons.Query;
 using DataQI.Commons.Query.Support;
 using DataQI.Commons.Repository.Paging;
+using DataQI.Commons.Repository.Paging.Support;
 using DataQI.EntityFrameworkCore.Query.Support;
 using DataQI.EntityFrameworkCore.Test.Repository.Products;
+using DataQI.EntityFrameworkCore.Test.Fixtures;
 
 namespace DataQI.EntityFrameworkCore.Test.Query.Support
 {
-    public class EntityPagingBuilderTest
+    [Collection(nameof(DatabaseCollection))]
+    public class EntityPagingBuilderTest : IClassFixture<DbFixture>
     {
+        private readonly TestContext context;
+
+        public EntityPagingBuilderTest(DbFixture fixture)
+        {
+            context = fixture.ProductContext;
+        }
+
         [Fact]
         public void TestMergeKeepsMethodThenCriteriaThenPageThenKeyOrderAndDropsRepeats()
         {
@@ -39,7 +49,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestMergeAppendsEveryPartOfACompositeKey()
         {
             var orders = EntityPagingBuilder<Product>.MergeOrders(
-                new IOrderCriterion[0], PageRequest.Of(0, 10), new[] { "A", "B" });
+                [], PageRequest.Of(0, 10), new[] { "A", "B" });
 
             Assert.Equal(new[] { "A", "B" }, orders.Select(o => o.PropertyName));
         }
@@ -48,7 +58,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestMergeFailsWithoutKeyAndWithoutExplicitOrder()
         {
             var exception = Assert.Throws<InvalidOperationException>(() =>
-                EntityPagingBuilder<Product>.MergeOrders(new IOrderCriterion[0], PageRequest.Of(0, 10), new string[0]));
+                EntityPagingBuilder<Product>.MergeOrders([], PageRequest.Of(0, 10), []));
 
             Assert.Contains(nameof(Product), exception.Message);
         }
@@ -57,7 +67,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestMergeAcceptsAnEntityWithoutKeyWhenAnOrderIsGiven()
         {
             var orders = EntityPagingBuilder<Product>.MergeOrders(
-                new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), new string[0]);
+                new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), []);
 
             Assert.Single(orders);
         }
@@ -79,7 +89,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestEnsurePageAcceptsAValidCustomImplementation()
         {
-            EntityPagingBuilder<Product>.EnsurePage(new CustomPageRequest(2, 10, 20, new IOrderCriterion[0]));
+            EntityPagingBuilder<Product>.EnsurePage(new CustomPageRequest(2, 10, 20, []));
         }
 
         [Theory]
@@ -91,7 +101,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [InlineData(2, 10, -20L)]
         public void TestEnsurePageRejectsInconsistentCustomImplementations(int index, int size, long offset)
         {
-            var page = new CustomPageRequest(index, size, offset, new IOrderCriterion[0]);
+            var page = new CustomPageRequest(index, size, offset, []);
 
             Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.EnsurePage(page));
         }
@@ -138,16 +148,12 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestKeyPropertiesComeFromTheModel()
         {
-            using (var context = TestContext.NewInstance("dbtest-paging-builder.s3db"))
-            {
-                Assert.Equal(new[] { nameof(Product.Id) },
-                    EntityPagingBuilder<Product>.KeyProperties(context).Select(k => k.Name));
-                context.Database.EnsureDeleted();
-            }
+            Assert.Equal(new[] { nameof(Product.Id) },
+                EntityPagingBuilder<Product>.KeyProperties(context).Select(k => k.Name));
         }
 
         [Fact]
-        public void TestWindowOrdersByAShadowKey()
+        public void TestBuildPagedQueryOrdersByAShadowKey()
         {
             using (var context = ShadowKeyContext.CreateSeeded(rows: 5))
             {
@@ -155,7 +161,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 var orders = EntityPagingBuilder<ShadowKeyEntity>.MergeOrders(
                     new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), keys.Select(k => k.Name));
 
-                var query = EntityPagingBuilder<ShadowKeyEntity>.Window(context.Set<ShadowKeyEntity>(), orders, keys, 0, 10);
+                var query = EntityPagingBuilder<ShadowKeyEntity>.BuildPagedQuery(context.Set<ShadowKeyEntity>(), orders, keys, 0, 10);
 
                 Assert.Equal(5, query.ToList().Count);
                 Assert.Contains("ShadowId", query.ToQueryString());
@@ -163,7 +169,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         }
 
         [Fact]
-        public void TestWindowOrdersByACompositeKey()
+        public void TestBuildPagedQueryOrdersByACompositeKey()
         {
             using (var context = CompositeKeyContext.CreateSeeded(rows: 6))
             {
@@ -171,7 +177,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 var orders = EntityPagingBuilder<CompositeKeyEntity>.MergeOrders(
                     new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), keys.Select(k => k.Name));
 
-                var query = EntityPagingBuilder<CompositeKeyEntity>.Window(context.Set<CompositeKeyEntity>(), orders, keys, 0, 10);
+                var query = EntityPagingBuilder<CompositeKeyEntity>.BuildPagedQuery(context.Set<CompositeKeyEntity>(), orders, keys, 0, 10);
 
                 Assert.Equal(new[] { "Name", "A", "B" }, orders.Select(o => o.PropertyName));
                 Assert.Equal(6, query.ToList().Count);
@@ -179,14 +185,10 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         }
 
         [Fact]
-        public void TestWindowStillFailsForAnUnknownOrderProperty()
+        public void TestBuildPagedQueryStillFailsForAnUnknownOrderProperty()
         {
-            using (var context = TestContext.NewInstance("dbtest-paging-builder.s3db"))
-            {
-                Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.Window(
-                    context.Set<Product>(), new[] { Order.Asc("Nope") }, new (string, Type)[0], 0, 10));
-                context.Database.EnsureDeleted();
-            }
+            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.BuildPagedQuery(
+                context.Set<Product>(), new[] { Order.Asc("Nope") }, [], 0, 10));
         }
 
         [Theory]
@@ -206,20 +208,16 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         }
 
         [Fact]
-        public void TestWindowTurnsSkipAndTakeIntoSqlParameters()
+        public void TestBuildPagedQueryTurnsSkipAndTakeIntoSqlParameters()
         {
-            using (var context = TestContext.NewInstance("dbtest-paging-builder.s3db"))
-            {
-                var query = EntityPagingBuilder<Product>.Window(
-                    context.Set<Product>().AsNoTracking(),
-                    new[] { Order.Asc("Id") }, new (string, Type)[0], skip: 20, take: 10);
+            var query = EntityPagingBuilder<Product>.BuildPagedQuery(
+                context.Set<Product>().AsNoTracking(),
+                new[] { Order.Asc("Id") }, [], skip: 20, take: 10);
 
-                var sql = query.ToQueryString();
+            var sql = query.ToQueryString();
 
-                Assert.Contains("OFFSET @", sql);
-                Assert.DoesNotContain("OFFSET 20", sql);
-                context.Database.EnsureDeleted();
-            }
+            Assert.Contains("OFFSET @", sql);
+            Assert.DoesNotContain("OFFSET 20", sql);
         }
     }
 

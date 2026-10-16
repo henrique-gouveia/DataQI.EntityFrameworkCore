@@ -1,4 +1,5 @@
 using DataQI.Commons.Repository.Paging;
+using DataQI.Commons.Repository.Paging.Support;
 using DataQI.EntityFrameworkCore.Repository;
 using DataQI.EntityFrameworkCore.Repository.Support;
 
