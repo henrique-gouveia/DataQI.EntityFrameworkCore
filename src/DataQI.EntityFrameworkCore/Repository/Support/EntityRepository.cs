@@ -172,7 +172,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         public ISlice<TEntity> FindSlice(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
         {
             var (pagedQuery, _) = PagedQuery(criteriaBuilder, page, 1);
-            return ToSlice(pagedQuery.ToList(), page);
+            return PagingRules.ToSlice(pagedQuery.ToList(), page);
         }
 
         /// <inheritdoc />
@@ -180,7 +180,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             CancellationToken cancellationToken = default)
         {
             var (pagedQuery, _) = PagedQuery(criteriaBuilder, page, 1);
-            return ToSlice(await pagedQuery.ToListAsync(cancellationToken), page);
+            return PagingRules.ToSlice(await pagedQuery.ToListAsync(cancellationToken), page);
         }
 
         /// <inheritdoc />
@@ -189,7 +189,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         {
             var (pagedQuery, filtered) = PagedQuery(criteriaBuilder, page, 0);
             var items = pagedQuery.ToList();
-            var total = EntityPagingBuilder<TEntity>.DeduceTotal(items.Count, page) ?? filtered.LongCount();
+            var total = PagingRules.DeduceTotal(items.Count, page) ?? filtered.LongCount();
             return new Page<TEntity>(items, page.PageIndex, page.PageSize, total);
         }
 
@@ -200,26 +200,18 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         {
             var (pagedQuery, filtered) = PagedQuery(criteriaBuilder, page, 0);
             var items = await pagedQuery.ToListAsync(cancellationToken);
-            var total = EntityPagingBuilder<TEntity>.DeduceTotal(items.Count, page)
+            var total = PagingRules.DeduceTotal(items.Count, page)
                 ?? await filtered.LongCountAsync(cancellationToken);
             return new Page<TEntity>(items, page.PageIndex, page.PageSize, total);
-        }
-
-        private static ISlice<TEntity> ToSlice(List<TEntity> items, IPageRequest page)
-        {
-            var hasNext = items.Count > page.PageSize;
-            if (hasNext)
-                items.RemoveAt(items.Count - 1);
-            return new Slice<TEntity>(items, page.PageIndex, page.PageSize, hasNext);
         }
 
         private (IQueryable<TEntity> Query, IQueryable<TEntity> Filtered) PagedQuery(
             Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page, int extra)
         {
-            EntityPagingBuilder<TEntity>.EnsurePage(page);
+            PagingRules.EnsurePage(page);
             var (criteria, filtered) = FilteredQuery(criteriaBuilder);
             var keys = EntityPagingBuilder<TEntity>.KeyProperties(context);
-            var orders = EntityPagingBuilder<TEntity>.MergeOrders(criteria.Orders, page, keys.Select(k => k.Name));
+            var orders = PagingRules.MergeOrders<TEntity>(criteria.Orders, page, keys.Select(k => k.Name));
             return (EntityPagingBuilder<TEntity>.BuildPagedQuery(filtered, orders, keys, (int)page.Offset, page.PageSize + extra), filtered);
         }
 

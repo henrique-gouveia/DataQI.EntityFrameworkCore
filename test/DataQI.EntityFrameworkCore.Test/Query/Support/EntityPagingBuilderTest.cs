@@ -23,129 +23,6 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         }
 
         [Fact]
-        public void TestMergeKeepsMethodThenCriteriaThenPageThenKeyOrderAndDropsRepeats()
-        {
-            var orders = EntityPagingBuilder<Product>.MergeOrders(
-                new[] { Order.Asc("Name") },
-                PageRequest.Of(0, 10, Order.Desc("Name"), Order.Desc("Price")),
-                new[] { "Id" });
-
-            Assert.Equal(new[] { "Name", "Price", "Id" }, orders.Select(o => o.PropertyName));
-            Assert.Equal(OrderDirection.Asc, orders[0].Direction);
-            Assert.Equal(OrderDirection.Asc, orders[2].Direction);
-        }
-
-        [Fact]
-        public void TestMergeDoesNotRepeatAKeyAlreadyInTheOrdering()
-        {
-            var orders = EntityPagingBuilder<Product>.MergeOrders(
-                new[] { Order.Desc("Id") }, PageRequest.Of(0, 10), new[] { "Id" });
-
-            Assert.Single(orders);
-            Assert.Equal(OrderDirection.Desc, orders[0].Direction);
-        }
-
-        [Fact]
-        public void TestMergeAppendsEveryPartOfACompositeKey()
-        {
-            var orders = EntityPagingBuilder<Product>.MergeOrders(
-                [], PageRequest.Of(0, 10), new[] { "A", "B" });
-
-            Assert.Equal(new[] { "A", "B" }, orders.Select(o => o.PropertyName));
-        }
-
-        [Fact]
-        public void TestMergeFailsWithoutKeyAndWithoutExplicitOrder()
-        {
-            var exception = Assert.Throws<InvalidOperationException>(() =>
-                EntityPagingBuilder<Product>.MergeOrders([], PageRequest.Of(0, 10), []));
-
-            Assert.Contains(nameof(Product), exception.Message);
-        }
-
-        [Fact]
-        public void TestMergeAcceptsAnEntityWithoutKeyWhenAnOrderIsGiven()
-        {
-            var orders = EntityPagingBuilder<Product>.MergeOrders(
-                new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), []);
-
-            Assert.Single(orders);
-        }
-
-        [Fact]
-        public void TestEnsurePageRejectsNull()
-        {
-            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.EnsurePage(null));
-        }
-
-        [Fact]
-        public void TestEnsurePageRejectsOffsetBeyondIntMax()
-        {
-            var page = PageRequest.Of(int.MaxValue, 10);
-
-            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.EnsurePage(page));
-        }
-
-        [Fact]
-        public void TestEnsurePageAcceptsAValidCustomImplementation()
-        {
-            EntityPagingBuilder<Product>.EnsurePage(new CustomPageRequest(2, 10, 20, []));
-        }
-
-        [Theory]
-        [InlineData(-1, 10, -10L)]
-        [InlineData(0, 0, 0L)]
-        [InlineData(0, -3, 0L)]
-        [InlineData(0, int.MaxValue, 0L)]
-        [InlineData(2, 10, 5L)]
-        [InlineData(2, 10, -20L)]
-        public void TestEnsurePageRejectsInconsistentCustomImplementations(int index, int size, long offset)
-        {
-            var page = new CustomPageRequest(index, size, offset, []);
-
-            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.EnsurePage(page));
-        }
-
-        [Fact]
-        public void TestEnsurePageRejectsNullOrders()
-        {
-            var page = new CustomPageRequest(0, 10, 0, null);
-
-            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.EnsurePage(page));
-        }
-
-        [Fact]
-        public void TestEnsurePageRejectsNullOrderOrEmptyPropertyName()
-        {
-            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.EnsurePage(
-                new CustomPageRequest(0, 10, 0, new IOrderCriterion[] { null })));
-            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.EnsurePage(
-                new CustomPageRequest(0, 10, 0, new[] { Order.Asc("") })));
-        }
-
-        [Theory]
-        [InlineData(null, OrderDirection.Asc)]
-        [InlineData("", OrderDirection.Asc)]
-        [InlineData("   ", OrderDirection.Asc)]
-        [InlineData("Name", (OrderDirection)123)]
-        public void TestEnsurePageRejectsInvalidCustomOrders(string name, OrderDirection direction)
-        {
-            var page = new CustomPageRequest(0, 10, 0, new IOrderCriterion[] { new CustomOrder(name, direction) });
-            Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.EnsurePage(page));
-        }
-
-        private sealed class CustomOrder : IOrderCriterion
-        {
-            public CustomOrder(string name, OrderDirection direction)
-            {
-                PropertyName = name;
-                Direction = direction;
-            }
-            public string PropertyName { get; }
-            public OrderDirection Direction { get; }
-        }
-
-        [Fact]
         public void TestKeyPropertiesComeFromTheModel()
         {
             Assert.Equal(new[] { nameof(Product.Id) },
@@ -158,7 +35,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             using (var context = ShadowKeyContext.CreateSeeded(rows: 5))
             {
                 var keys = EntityPagingBuilder<ShadowKeyEntity>.KeyProperties(context);
-                var orders = EntityPagingBuilder<ShadowKeyEntity>.MergeOrders(
+                var orders = PagingRules.MergeOrders<ShadowKeyEntity>(
                     new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), keys.Select(k => k.Name));
 
                 var query = EntityPagingBuilder<ShadowKeyEntity>.BuildPagedQuery(context.Set<ShadowKeyEntity>(), orders, keys, 0, 10);
@@ -174,7 +51,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             using (var context = CompositeKeyContext.CreateSeeded(rows: 6))
             {
                 var keys = EntityPagingBuilder<CompositeKeyEntity>.KeyProperties(context);
-                var orders = EntityPagingBuilder<CompositeKeyEntity>.MergeOrders(
+                var orders = PagingRules.MergeOrders<CompositeKeyEntity>(
                     new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), keys.Select(k => k.Name));
 
                 var query = EntityPagingBuilder<CompositeKeyEntity>.BuildPagedQuery(context.Set<CompositeKeyEntity>(), orders, keys, 0, 10);
@@ -189,22 +66,6 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         {
             Assert.Throws<ArgumentException>(() => EntityPagingBuilder<Product>.BuildPagedQuery(
                 context.Set<Product>(), new[] { Order.Asc("Nope") }, [], 0, 10));
-        }
-
-        [Theory]
-        [InlineData(5, 10, 2, 25L)]
-        [InlineData(0, 10, 0, 0L)]
-        public void TestDeducesTheTotalWhenThePageRevealsIt(int items, int size, int index, long expected)
-        {
-            Assert.Equal(expected, EntityPagingBuilder<Product>.DeduceTotal(items, PageRequest.Of(index, size)));
-        }
-
-        [Theory]
-        [InlineData(10, 10, 0)]
-        [InlineData(0, 10, 5)]
-        public void TestDoesNotDeduceTheTotalOtherwise(int items, int size, int index)
-        {
-            Assert.Null(EntityPagingBuilder<Product>.DeduceTotal(items, PageRequest.Of(index, size)));
         }
 
         [Fact]
