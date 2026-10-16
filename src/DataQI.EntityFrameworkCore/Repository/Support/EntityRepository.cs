@@ -167,6 +167,12 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         public Task<TEntity> FindOneAsync(Func<ICriteria, ICriteria> criteriaBuilder,
             CancellationToken cancellationToken = default)
             => CriteriaQuery(criteriaBuilder).SingleOrDefaultAsync(cancellationToken);
+        
+        private IQueryable<TEntity> CriteriaQuery(Func<ICriteria, ICriteria> criteriaBuilder)
+        {
+            var (criteria, filtered) = FilteredQuery(criteriaBuilder);
+            return EntityOrderedQueryBuilder<TEntity>.BuildOrderedQuery(filtered, criteria.Orders);
+        }
 
         /// <inheritdoc />
         public ISlice<TEntity> FindSlice(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
@@ -212,7 +218,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             var (criteria, filtered) = FilteredQuery(criteriaBuilder);
             var keys = EntityPagingBuilder<TEntity>.KeyProperties(context);
             var orders = PagingRules.MergeOrders<TEntity>(criteria.Orders, page, keys.Select(k => k.Name));
-            return (EntityPagingBuilder<TEntity>.BuildPagedQuery(filtered, orders, keys, (int)page.Offset, page.PageSize + extra), filtered);
+            return (EntityPagingBuilder<TEntity>.BuildPagedQuery(filtered, orders, context.Model.FindEntityType(typeof(TEntity)), (int)page.Offset, page.PageSize + extra), filtered);
         }
 
         private (ICriteria Criteria, IQueryable<TEntity> Filtered) FilteredQuery(Func<ICriteria, ICriteria> criteriaBuilder)
@@ -221,12 +227,6 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             var criteria = criteriaBuilder(new Criteria());
             var predicate = EntityPredicateVisitor<TEntity>.BuildPredicate(criteria);
             return (criteria, context.Set<TEntity>().AsNoTracking().Where(predicate));
-        }
-
-        private IQueryable<TEntity> CriteriaQuery(Func<ICriteria, ICriteria> criteriaBuilder)
-        {
-            var (criteria, filtered) = FilteredQuery(criteriaBuilder);
-            return EntityOrderedQueryBuilder<TEntity>.BuildOrderedQuery(filtered, criteria.Orders);
         }
 
         /// <inheritdoc />

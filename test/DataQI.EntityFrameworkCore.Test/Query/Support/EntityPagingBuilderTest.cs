@@ -38,7 +38,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 var orders = PagingRules.MergeOrders<ShadowKeyEntity>(
                     new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), keys.Select(k => k.Name));
 
-                var query = EntityPagingBuilder<ShadowKeyEntity>.BuildPagedQuery(context.Set<ShadowKeyEntity>(), orders, keys, 0, 10);
+                var query = EntityPagingBuilder<ShadowKeyEntity>.BuildPagedQuery(context.Set<ShadowKeyEntity>(), orders, context.Model.FindEntityType(typeof(ShadowKeyEntity)), 0, 10);
 
                 Assert.Equal(5, query.ToList().Count);
                 Assert.Contains("ShadowId", query.ToQueryString());
@@ -54,7 +54,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 var orders = PagingRules.MergeOrders<CompositeKeyEntity>(
                     new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), keys.Select(k => k.Name));
 
-                var query = EntityPagingBuilder<CompositeKeyEntity>.BuildPagedQuery(context.Set<CompositeKeyEntity>(), orders, keys, 0, 10);
+                var query = EntityPagingBuilder<CompositeKeyEntity>.BuildPagedQuery(context.Set<CompositeKeyEntity>(), orders, context.Model.FindEntityType(typeof(CompositeKeyEntity)), 0, 10);
 
                 Assert.Equal(new[] { "Name", "A", "B" }, orders.Select(o => o.PropertyName));
                 Assert.Equal(6, query.ToList().Count);
@@ -65,7 +65,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestBuildPagedQueryStillFailsForAnUnknownOrderProperty()
         {
             Assert.Throws<InvalidOperationException>(() => EntityPagingBuilder<Product>.BuildPagedQuery(
-                context.Set<Product>(), new[] { Order.Asc("Nope") }, [], 0, 10));
+                context.Set<Product>(), new[] { Order.Asc("Nope") }, context.Model.FindEntityType(typeof(Product)), 0, 10));
         }
 
         [Fact]
@@ -73,12 +73,64 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         {
             var query = EntityPagingBuilder<Product>.BuildPagedQuery(
                 context.Set<Product>().AsNoTracking(),
-                new[] { Order.Asc("Id") }, [], skip: 20, take: 10);
+                new[] { Order.Asc("Id") }, context.Model.FindEntityType(typeof(Product)), skip: 20, take: 10);
 
             var sql = query.ToQueryString();
 
             Assert.Contains("OFFSET @", sql);
             Assert.DoesNotContain("OFFSET 20", sql);
+        }
+
+        [Fact]
+        public void TestBuildPagedQueryUsesTheMappedHiddenProperty()
+        {
+            using var hidden = new HiddenPropertyContext();
+            var query = EntityPagingBuilder<HiddenPropertyEntity>.BuildPagedQuery(
+                hidden.Set<HiddenPropertyEntity>(), new[] { Order.Asc("Name") }, hidden.Model.FindEntityType(typeof(HiddenPropertyEntity)), 0, 10);
+
+            Assert.Equal(new[] { 1, 2 }, query.Select(e => e.Name).ToArray());
+        }
+
+        [Fact]
+        public void TestBuildPagedQueryRejectsAnUnmappedClrProperty()
+        {
+            using var hidden = new HiddenPropertyContext();
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                EntityPagingBuilder<HiddenPropertyEntity>.BuildPagedQuery(hidden.Set<HiddenPropertyEntity>(),
+                    new[] { Order.Asc("Unmapped") }, hidden.Model.FindEntityType(typeof(HiddenPropertyEntity)), 0, 10));
+
+            Assert.Equal("Cannot order HiddenPropertyEntity by unknown property 'Unmapped'.", exception.Message);
+        }
+
+        private class HiddenPropertyBase
+        {
+            public string Name { get; set; }
+        }
+
+        private sealed class HiddenPropertyEntity : HiddenPropertyBase
+        {
+            public int Id { get; set; }
+            public new int Name { get; set; }
+            [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+            public string Unmapped { get; set; }
+        }
+
+        private sealed class HiddenPropertyContext : DbContext
+        {
+            public HiddenPropertyContext() : base(new DbContextOptionsBuilder().UseSqlite("Data Source=:memory:").Options)
+            {
+                Database.OpenConnection();
+                Database.EnsureCreated();
+                AddRange(new HiddenPropertyEntity { Id = 1, Name = 2 }, new HiddenPropertyEntity { Id = 2, Name = 1 });
+                SaveChanges();
+                ChangeTracker.Clear();
+            }
+
+            protected override void OnModelCreating(ModelBuilder modelBuilder)
+            {
+                modelBuilder.Entity<HiddenPropertyEntity>().HasKey(e => e.Id);
+                modelBuilder.Entity<HiddenPropertyEntity>().Property(e => e.Name);
+            }
         }
     }
 

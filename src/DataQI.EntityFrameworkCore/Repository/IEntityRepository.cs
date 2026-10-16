@@ -15,7 +15,9 @@ namespace DataQI.EntityFrameworkCore.Repository
     /// <typeparam name="TId">The identifier type of <typeparamref name="TEntity"/>.</typeparam>
     /// <remarks>Combines independent CRUD and paging contracts and exposes LINQ based searches.</remarks>
     public interface IEntityRepository<TEntity, in TId> :
-        ICrudRepository<TEntity, TId>, IPagedRepository<TEntity, TId> where TEntity : class
+        ICrudRepository<TEntity, TId>,
+        IPagedRepository<TEntity, TId>
+        where TEntity : class
     {
         /// <summary>Gets a queryable over all entities for composing further LINQ operators.</summary>
         /// <returns>A deferred query using the context's default tracking behavior; nothing runs until it is enumerated.</returns>
