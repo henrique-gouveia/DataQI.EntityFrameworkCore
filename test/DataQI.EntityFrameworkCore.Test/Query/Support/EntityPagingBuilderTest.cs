@@ -1,20 +1,20 @@
 using System;
 using System.Linq;
+
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using DataQI.Commons.Query;
+
 using DataQI.Commons.Query.Support;
-using DataQI.Commons.Repository.Paging;
-using DataQI.Commons.Repository.Paging.Support;
+
 using DataQI.EntityFrameworkCore.Query.Support;
-using DataQI.EntityFrameworkCore.Test.Repository.Products;
 using DataQI.EntityFrameworkCore.Test.Fixtures;
 using DataQI.EntityFrameworkCore.Test.Fixtures.Paging;
+using DataQI.EntityFrameworkCore.Test.Repository.Products;
 
 namespace DataQI.EntityFrameworkCore.Test.Query.Support
 {
     [Collection(nameof(DatabaseCollection))]
-    public class EntityPagingBuilderTest : IClassFixture<DbFixture>
+    public sealed class EntityPagingBuilderTest : IClassFixture<DbFixture>
     {
         private readonly TestContext context;
 
@@ -31,39 +31,59 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         }
 
         [Fact]
+        public void TestKeyPropertiesIncludeShadowKey()
+        {
+            using var context = ShadowKeyContext.CreateSeeded(rows: 0);
+
+            var keys = EntityPagingBuilder<ShadowKeyEntity>.KeyProperties(context);
+
+            Assert.Equal(new[] { ("ShadowId", typeof(int)) }, keys);
+        }
+
+        [Fact]
+        public void TestKeyPropertiesIncludeEveryCompositeKeyProperty()
+        {
+            using var context = CompositeKeyContext.CreateSeeded(rows: 0);
+
+            var keys = EntityPagingBuilder<CompositeKeyEntity>.KeyProperties(context);
+
+            Assert.Equal(new[] { (nameof(CompositeKeyEntity.A), typeof(int)), (nameof(CompositeKeyEntity.B), typeof(int)) }, keys);
+        }
+
+        [Fact]
         public void TestBuildPagedQueryOrdersByAShadowKey()
         {
-            using (var context = ShadowKeyContext.CreateSeeded(rows: 5))
-            {
-                var keys = EntityPagingBuilder<ShadowKeyEntity>.KeyProperties(context);
-                var orders = PagingRules.MergeOrders<ShadowKeyEntity>(
-                    new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), keys.Select(k => k.Name));
+            using var context = ShadowKeyContext.CreateSeeded(rows: 5);
+            var orders = new[] { Order.Asc(nameof(ShadowKeyEntity.Name)), Order.Asc("ShadowId") };
+            var entityType = context.Model.FindEntityType(typeof(ShadowKeyEntity));
 
-                var query = EntityPagingBuilder<ShadowKeyEntity>.BuildPagedQuery(context.Set<ShadowKeyEntity>(), orders, context.Model.FindEntityType(typeof(ShadowKeyEntity)), 0, 10);
+            var query = EntityPagingBuilder<ShadowKeyEntity>.BuildPagedQuery(
+                context.Set<ShadowKeyEntity>(), orders, entityType, skip: 0, take: 10);
 
-                Assert.Equal(5, query.ToList().Count);
-                Assert.Contains("ShadowId", query.ToQueryString());
-            }
+            Assert.Equal(Enumerable.Range(0, 5), query.Select(entity => entity.Marker));
         }
 
         [Fact]
-        public void TestBuildPagedQueryOrdersByACompositeKey()
+        public void TestBuildPagedQueryOrdersByEveryCompositeKeyProperty()
         {
-            using (var context = CompositeKeyContext.CreateSeeded(rows: 6))
+            using var context = CompositeKeyContext.CreateSeeded(rows: 6);
+            var orders = new[]
             {
-                var keys = EntityPagingBuilder<CompositeKeyEntity>.KeyProperties(context);
-                var orders = PagingRules.MergeOrders<CompositeKeyEntity>(
-                    new[] { Order.Asc("Name") }, PageRequest.Of(0, 10), keys.Select(k => k.Name));
+                Order.Asc(nameof(CompositeKeyEntity.Name)),
+                Order.Asc(nameof(CompositeKeyEntity.A)),
+                Order.Asc(nameof(CompositeKeyEntity.B))
+            };
+            var entityType = context.Model.FindEntityType(typeof(CompositeKeyEntity));
+            var expectedKeys = Enumerable.Range(0, 6).Select(index => (index / 2, index % 2));
 
-                var query = EntityPagingBuilder<CompositeKeyEntity>.BuildPagedQuery(context.Set<CompositeKeyEntity>(), orders, context.Model.FindEntityType(typeof(CompositeKeyEntity)), 0, 10);
+            var query = EntityPagingBuilder<CompositeKeyEntity>.BuildPagedQuery(
+                context.Set<CompositeKeyEntity>(), orders, entityType, skip: 0, take: 10);
 
-                Assert.Equal(new[] { "Name", "A", "B" }, orders.Select(o => o.PropertyName));
-                Assert.Equal(6, query.ToList().Count);
-            }
+            Assert.Equal(expectedKeys, query.AsEnumerable().Select(entity => (entity.A, entity.B)));
         }
 
         [Fact]
-        public void TestBuildPagedQueryStillFailsForAnUnknownOrderProperty()
+        public void TestBuildPagedQueryRejectsUnknownOrderProperty()
         {
             Assert.Throws<InvalidOperationException>(() => EntityPagingBuilder<Product>.BuildPagedQuery(
                 context.Set<Product>(), new[] { Order.Asc("Nope") }, context.Model.FindEntityType(typeof(Product)), 0, 10));
@@ -78,16 +98,17 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
 
             var sql = query.ToQueryString();
 
+            Assert.Contains("LIMIT @", sql);
             Assert.Contains("OFFSET @", sql);
-            Assert.DoesNotContain("OFFSET 20", sql);
         }
 
         [Fact]
         public void TestBuildPagedQueryUsesTheMappedHiddenProperty()
         {
             using var hidden = new HiddenPropertyContext();
+
             var query = EntityPagingBuilder<HiddenPropertyEntity>.BuildPagedQuery(
-                hidden.Set<HiddenPropertyEntity>(), new[] { Order.Asc("Name") }, hidden.Model.FindEntityType(typeof(HiddenPropertyEntity)), 0, 10);
+                hidden.Set<HiddenPropertyEntity>(), new[] { Order.Asc(nameof(HiddenPropertyEntity.Name)) }, hidden.Model.FindEntityType(typeof(HiddenPropertyEntity)), 0, 10);
 
             Assert.Equal(new[] { 1, 2 }, query.Select(e => e.Name).ToArray());
         }
@@ -96,9 +117,10 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestBuildPagedQueryRejectsAnUnmappedClrProperty()
         {
             using var hidden = new HiddenPropertyContext();
+
             var exception = Assert.Throws<InvalidOperationException>(() =>
                 EntityPagingBuilder<HiddenPropertyEntity>.BuildPagedQuery(hidden.Set<HiddenPropertyEntity>(),
-                    new[] { Order.Asc("Unmapped") }, hidden.Model.FindEntityType(typeof(HiddenPropertyEntity)), 0, 10));
+                    new[] { Order.Asc(nameof(HiddenPropertyEntity.Unmapped)) }, hidden.Model.FindEntityType(typeof(HiddenPropertyEntity)), 0, 10));
 
             Assert.Equal("Cannot order HiddenPropertyEntity by unknown property 'Unmapped'.", exception.Message);
         }
@@ -112,6 +134,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         {
             public int Id { get; set; }
             public new int Name { get; set; }
+
             [System.ComponentModel.DataAnnotations.Schema.NotMapped]
             public string Unmapped { get; set; }
         }
@@ -134,5 +157,4 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             }
         }
     }
-
 }
