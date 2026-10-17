@@ -15,6 +15,7 @@ using DataQI.Commons.Repository.Paging.Support;
 using DataQI.EntityFrameworkCore.Repository.Support;
 using DataQI.EntityFrameworkCore.Test.Repository.Products;
 using DataQI.EntityFrameworkCore.Test.Fixtures;
+using DataQI.EntityFrameworkCore.Test.Fixtures.Paging;
 using DataQI.EntityFrameworkCore.Test.Query.Support;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository

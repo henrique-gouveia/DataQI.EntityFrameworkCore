@@ -9,6 +9,7 @@ using DataQI.Commons.Repository.Paging.Support;
 using DataQI.EntityFrameworkCore.Query.Support;
 using DataQI.EntityFrameworkCore.Test.Repository.Products;
 using DataQI.EntityFrameworkCore.Test.Fixtures;
+using DataQI.EntityFrameworkCore.Test.Fixtures.Paging;
 
 namespace DataQI.EntityFrameworkCore.Test.Query.Support
 {

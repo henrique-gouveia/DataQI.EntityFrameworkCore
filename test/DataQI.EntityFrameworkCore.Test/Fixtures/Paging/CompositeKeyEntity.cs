@@ -1,4 +1,4 @@
-namespace DataQI.EntityFrameworkCore.Test.Query.Support
+namespace DataQI.EntityFrameworkCore.Test.Fixtures.Paging
 {
     public class CompositeKeyEntity
     {

@@ -1,14 +1,17 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-namespace DataQI.EntityFrameworkCore.Test.Query.Support
+
+namespace DataQI.EntityFrameworkCore.Test.Fixtures.Paging
 {
     public sealed class ShadowKeyContext : DbContext
     {
         private readonly SqliteConnection connection;
+
         private ShadowKeyContext(SqliteConnection connection) : base(new DbContextOptionsBuilder().UseSqlite(connection).Options)
         {
             this.connection = connection;
         }
+
         public static ShadowKeyContext CreateSeeded(int rows)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
@@ -21,11 +24,13 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             context.ChangeTracker.Clear();
             return context;
         }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<ShadowKeyEntity>().Property<int>("ShadowId");
             modelBuilder.Entity<ShadowKeyEntity>().HasKey("ShadowId");
         }
+
         public override void Dispose()
         {
             base.Dispose();
