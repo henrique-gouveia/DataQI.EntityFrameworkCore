@@ -152,16 +152,16 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             context.Dispose();
         }
 
-        public class StringEntity
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-        }
-
         public interface IStringRepository : IEntityRepository<StringEntity, int>
         {
             IEnumerable<StringEntity> FindByNameGreaterThan(string name);
             Task<IEnumerable<StringEntity>> FindByNameGreaterThanAsync(string name, CancellationToken cancellationToken = default);
+        }
+
+        public class StringEntity
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
         }
 
         private sealed class StringContext : DbContext
