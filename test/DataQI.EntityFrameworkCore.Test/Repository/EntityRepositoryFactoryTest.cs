@@ -3,6 +3,7 @@ using System;
 using Xunit;
 
 using DataQI.Commons.Repository;
+using DataQI.Commons.Repository.Paging;
 using DataQI.EntityFrameworkCore.Repository.Support;
 
 namespace DataQI.EntityFrameworkCore.Test.Repository
@@ -16,6 +17,16 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
         {
             context = TestContext.NewInstance(":memory:");
             repositoryFactory = new EntityRepositoryFactory();
+        }
+
+        [Fact]
+        public void TestProviderCombinesIndependentCrudAndPagingContracts()
+        {
+            var provider = typeof(DataQI.EntityFrameworkCore.Repository.IEntityRepository<object, int>);
+
+            Assert.True(typeof(ICrudRepository<object, int>).IsAssignableFrom(provider));
+            Assert.True(typeof(IPagedRepository<object, int>).IsAssignableFrom(provider));
+            Assert.False(typeof(ICrudRepository<object, int>).IsAssignableFrom(typeof(IPagedRepository<object, int>)));
         }
 
         [Fact]

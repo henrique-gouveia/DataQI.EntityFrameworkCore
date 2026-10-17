@@ -7,6 +7,17 @@ DataQI EntityFrameworkCore creates repository implementations from C# interfaces
 [![NuGet](https://img.shields.io/nuget/v/DataQI.EntityFrameworkCore.svg)](https://www.nuget.org/packages/DataQI.EntityFrameworkCore/)
 [![License](https://img.shields.io/github/license/henrique-gouveia/DataQI.EntityFrameworkCore.svg)](https://github.com/henrique-gouveia/DataQI.EntityFrameworkCore/blob/main/LICENSE)
 
+## Features
+
+- Synchronous and asynchronous CRUD operations backed by EF Core, with cancellation support.
+- Repositories declared as C# interfaces, with query methods derived from method names.
+- Criteria with comparisons, text matches, logical groups, and ordering.
+- Collection and single-entity queries, plus paging with `ISlice<T>` and `IPage<T>`.
+- Deterministic paging order with primary-key tie-breaks and total counts only when needed.
+- LINQ predicates and query builders for custom queries over `IQueryable<TEntity>`.
+- Repository factories, custom implementations, and Microsoft dependency injection integration.
+- Query-method completion through the transitive DataQI.Analyzers dependency.
+
 ## Getting Started
 
 ### Installing
@@ -19,7 +30,7 @@ dotnet add package DataQI.EntityFrameworkCore
 
 ### Defining a Repository
 
-Extend `IEntityRepository<TEntity, TId>` from `DataQI.EntityFrameworkCore.Repository`. `TEntity` is the mapped entity class; `TId` is the type of its single primary key. Identifier methods take that key value, for example `FindOne(1)` and `Delete(person.Id)`. Composite keys are not supported by these identifier methods.
+The provider combines the independent `ICrudRepository<TEntity, TId>` and `IPagedRepository<TEntity, TId>` contracts. Extend `IEntityRepository<TEntity, TId>` from `DataQI.EntityFrameworkCore.Repository`. `TEntity` is the mapped entity class; `TId` is the type of its single primary key. Identifier methods take that key value, for example `FindOne(1)` and `Delete(person.Id)`. Composite keys are not supported by these identifier methods.
 
 ```csharp
 [Table("Person")]
@@ -180,6 +191,36 @@ people = personRepository.FindByEmailContainingOrPhoneNotNull("@example.com");
 people = personRepository.FindByFirstNameAndLastNameOrBirthDateGreaterThan(
     "Ada", "Lovelace", new DateTime(1900, 1, 1));
 ```
+
+#### Paging
+
+Added to `IProductRepository` (import `DataQI.Commons.Repository.Paging` and `DataQI.Commons.Repository.Paging.Support`):
+
+```csharp
+ISlice<Product> FindByDepartmentOrderByNameAsc(string department, IPageRequest page);
+Task<IPage<Product>> FindByDepartmentAsync(
+    string department, IPageRequest page, CancellationToken cancellationToken = default);
+```
+
+```csharp
+var request = PageRequest.Of(0, 20, Order.Asc(nameof(Product.Name)));
+var slice = repository.FindSlice(c => c
+    .Add(Restrictions.Equal(nameof(Product.Department), "D1")), request);
+var page = repository.FindPage(c => c, request);
+var namedSlice = repository.FindByDepartmentOrderByNameAsc("D1", request);
+var namedPage = await repository.FindByDepartmentAsync("D1", request, cancellationToken);
+var asyncSlice = await repository.FindSliceAsync(c => c, request, cancellationToken);
+```
+
+`PageIndex` is zero-based. `ISlice<T>` includes read-only `Items`, `HasNext` and `HasPrevious`; `IPage<T>` adds `long TotalCount` and `long TotalPages`. Slice uses one query and is the recommended default. Page runs `COUNT` only when needed: a partial page with items, or an empty first page, reveals the total. An empty page beyond the end still counts matching rows.
+
+Page items and total can come from two non-atomic queries; wrap the operation in a transaction if consistency matters. Clients should cap `PageSize`; deep `OFFSET` degrades performance. Requests require a positive size below `int.MaxValue` and an offset no larger than `int.MaxValue`; a null request throws `ArgumentException`.
+
+Ordering follows method-name `OrderBy`, criteria `AddOrder`, then `page.Orders`, keeping the first occurrence of each property. Missing primary-key properties are appended ascending for stable ties. `NULL` ordering depends on the database. Paging rejects unknown order properties with `InvalidOperationException` naming the entity and property. An entity without a key needs an explicit order.
+
+Paging query methods require exactly one `IPageRequest` as the last non-token parameter and a matching slice/page return type. An optional `CancellationToken` belongs last; async methods forward it to the provider. Invalid parsed-query signatures fail at proxy creation. See the [Commons query contracts](https://github.com/henrique-gouveia/DataQI.Commons#paging) for the full rules.
+
+EF Core forwards `CancellationToken` to asynchronous reads and counts. Shadow and composite primary keys also complete the ordering.
 
 ### Using Async Query Methods
 
@@ -371,6 +412,8 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 
 **v6.0.0 - current source**
 
+- New! Add criteria and query-method paging through `ISlice<T>`, `IPage<T>` and `IPageRequest`.
+- Change! The provider interface now combines independent CRUD and paging contracts; custom implementations must supply the four paging methods.
 - **Breaking Change!** Adopted the Commons 4.x criteria AST and removed the old public criteria and command-building types listed in the migration guide.
 - Change! Replaced Dynamic LINQ criteria strings with typed predicates and ordering expressions.
 - Change! Null tests on non-nullable properties now throw a clear exception.

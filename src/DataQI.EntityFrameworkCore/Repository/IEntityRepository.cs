@@ -6,15 +6,18 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using DataQI.Commons.Repository;
+using DataQI.Commons.Repository.Paging;
 
 namespace DataQI.EntityFrameworkCore.Repository
 {
     /// <summary>Defines the Entity Framework Core repository of an entity type.</summary>
     /// <typeparam name="TEntity">The entity type.</typeparam>
     /// <typeparam name="TId">The identifier type of <typeparamref name="TEntity"/>.</typeparam>
-    /// <remarks>In addition to the members of <see cref="ICrudRepository{TEntity, TId}"/>, it exposes LINQ based searches.</remarks>
+    /// <remarks>Combines independent CRUD and paging contracts and exposes LINQ based searches.</remarks>
     public interface IEntityRepository<TEntity, in TId> :
-        ICrudRepository<TEntity, TId> where TEntity : class
+        ICrudRepository<TEntity, TId>,
+        IPagedRepository<TEntity, TId>
+        where TEntity : class
     {
         /// <summary>Gets a queryable over all entities for composing further LINQ operators.</summary>
         /// <returns>A deferred query using the context's default tracking behavior; nothing runs until it is enumerated.</returns>
