@@ -2,22 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+
 using DataQI.Commons.Query;
 using DataQI.Commons.Query.Support;
-using DataQI.Commons.Repository.Paging;
 
 namespace DataQI.EntityFrameworkCore.Query.Support
 {
     internal static class EntityPagingBuilder<TEntity>
     {
-        public static IReadOnlyList<(string Name, Type ClrType)> KeyProperties(DbContext context)
-        {
-            var key = context.Model.FindEntityType(typeof(TEntity))?.FindPrimaryKey();
-            return key == null ? Array.Empty<(string, Type)>() : key.Properties.Select(p => (p.Name, p.ClrType)).ToArray();
-        }
-
         public static IQueryable<TEntity> BuildPagedQuery(IQueryable<TEntity> filtered, IReadOnlyList<IOrderCriterion> orders,
             IEntityType entityType, int skip, int take)
         {

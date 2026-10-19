@@ -103,9 +103,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         public IEnumerable<TEntity> Find(Expression<Func<TEntity, bool>> predicate)
         {
             Assert.NotNull(predicate, "Predicate must not be null");
-            var entities = context
-                .Set<TEntity>()
-                .AsNoTracking()
+            var entities = NoTrackingQuery()
                 .Where(predicate)
                 .ToList();
             return entities;
@@ -116,9 +114,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             CancellationToken cancellationToken = default)
         {
             Assert.NotNull(predicate, "Predicate must not be null");
-            var entities = await context
-                .Set<TEntity>()
-                .AsNoTracking()
+            var entities = await NoTrackingQuery()
                 .Where(predicate)
                 .ToListAsync(cancellationToken);
             return entities;
@@ -216,9 +212,12 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         {
             PagingRules.EnsurePage(page);
             var (criteria, filtered) = FilteredQuery(criteriaBuilder);
-            var keys = EntityPagingBuilder<TEntity>.KeyProperties(context);
+            var keys = context.KeyProperties<TEntity>();
             var orders = PagingRules.MergeOrders<TEntity>(criteria.Orders, page, keys.Select(k => k.Name));
-            return (EntityPagingBuilder<TEntity>.BuildPagedQuery(filtered, orders, context.Model.FindEntityType(typeof(TEntity)), (int)page.Offset, page.PageSize + extra), filtered);
+            var entityType = context.Model.FindEntityType(typeof(TEntity));
+            var pagedQuery = EntityPagingBuilder<TEntity>.BuildPagedQuery(
+                filtered, orders, entityType, (int)page.Offset, page.PageSize + extra);
+            return (pagedQuery, filtered);
         }
 
         private (ICriteria Criteria, IQueryable<TEntity> Filtered) FilteredQuery(Func<ICriteria, ICriteria> criteriaBuilder)
@@ -226,17 +225,14 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
             var criteria = criteriaBuilder(new Criteria());
             var predicate = EntityPredicateVisitor<TEntity>.BuildPredicate(criteria);
-            return (criteria, context.Set<TEntity>().AsNoTracking().Where(predicate));
+            return (criteria, NoTrackingQuery().Where(predicate));
         }
 
         /// <inheritdoc />
         /// <remarks>The returned entities are not tracked by the context.</remarks>
         public IEnumerable<TEntity> FindAll()
         {
-            var entities = context
-                .Set<TEntity>()
-                .AsNoTracking()
-                .ToList();
+            var entities = NoTrackingQuery().ToList();
             return entities;
         }
 
@@ -244,12 +240,11 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         /// <remarks>The returned entities are not tracked by the context.</remarks>
         public async Task<IEnumerable<TEntity>> FindAllAsync(CancellationToken cancellationToken = default)
         {
-            var entities = await context
-                .Set<TEntity>()
-                .AsNoTracking()
-                .ToListAsync(cancellationToken);
+            var entities = await NoTrackingQuery().ToListAsync(cancellationToken);
             return entities;
         }
+
+        private IQueryable<TEntity> NoTrackingQuery() => context.Set<TEntity>().AsNoTracking();
 
         /// <summary>Finds the entity with the given key value.</summary>
         /// <param name="id">The value of the entity's single key property; must not be <c>null</c>.</param>

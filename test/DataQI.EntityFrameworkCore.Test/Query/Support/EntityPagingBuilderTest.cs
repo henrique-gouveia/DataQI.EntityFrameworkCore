@@ -24,33 +24,6 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         }
 
         [Fact]
-        public void TestKeyPropertiesComeFromTheModel()
-        {
-            Assert.Equal(new[] { nameof(Product.Id) },
-                EntityPagingBuilder<Product>.KeyProperties(context).Select(k => k.Name));
-        }
-
-        [Fact]
-        public void TestKeyPropertiesIncludeShadowKey()
-        {
-            using var context = ShadowKeyContext.CreateSeeded(rows: 0);
-
-            var keys = EntityPagingBuilder<ShadowKeyEntity>.KeyProperties(context);
-
-            Assert.Equal(new[] { ("ShadowId", typeof(int)) }, keys);
-        }
-
-        [Fact]
-        public void TestKeyPropertiesIncludeEveryCompositeKeyProperty()
-        {
-            using var context = CompositeKeyContext.CreateSeeded(rows: 0);
-
-            var keys = EntityPagingBuilder<CompositeKeyEntity>.KeyProperties(context);
-
-            Assert.Equal(new[] { (nameof(CompositeKeyEntity.A), typeof(int)), (nameof(CompositeKeyEntity.B), typeof(int)) }, keys);
-        }
-
-        [Fact]
         public void TestBuildPagedQueryOrdersByAShadowKey()
         {
             using var context = ShadowKeyContext.CreateSeeded(rows: 5);
