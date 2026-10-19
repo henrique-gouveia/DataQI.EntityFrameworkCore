@@ -166,33 +166,35 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         
         private IQueryable<TEntity> CriteriaQuery(Func<ICriteria, ICriteria> criteriaBuilder)
         {
-            var (criteria, filtered) = FilteredQuery(criteriaBuilder);
-            return EntityOrderedQueryBuilder<TEntity>.BuildOrderedQuery(filtered, criteria.Orders);
+            var (criteria, filter) = BuildCriteria(criteriaBuilder);
+            var entityType = context.Model.FindEntityType(typeof(TEntity));
+            return EntityExpressionBuilder<TEntity>.BuildFind(
+                NoTrackingQuery(), filter, criteria.Orders.ToArray(), entityType);
         }
 
         /// <inheritdoc />
         public ISlice<TEntity> FindSlice(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
         {
-            var (pagedQuery, _) = PagedQuery(criteriaBuilder, page, 1);
-            return PagingRules.ToSlice(pagedQuery.ToList(), page);
+            var (pagedQuery, _) = Paged(criteriaBuilder, page, 1);
+            return PagingSupport.ToSlice(pagedQuery.ToList(), page);
         }
 
         /// <inheritdoc />
         public async Task<ISlice<TEntity>> FindSliceAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
             CancellationToken cancellationToken = default)
         {
-            var (pagedQuery, _) = PagedQuery(criteriaBuilder, page, 1);
-            return PagingRules.ToSlice(await pagedQuery.ToListAsync(cancellationToken), page);
+            var (pagedQuery, _) = Paged(criteriaBuilder, page, 1);
+            return PagingSupport.ToSlice(await pagedQuery.ToListAsync(cancellationToken), page);
         }
 
         /// <inheritdoc />
         /// <remarks>The page and total may require two non-atomic queries. Use a transaction when consistency matters.</remarks>
         public IPage<TEntity> FindPage(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
         {
-            var (pagedQuery, filtered) = PagedQuery(criteriaBuilder, page, 0);
+            var (pagedQuery, whereQuery) = Paged(criteriaBuilder, page, 0);
             var items = pagedQuery.ToList();
-            var total = PagingRules.DeduceTotal(items.Count, page) ?? filtered.LongCount();
-            return new Page<TEntity>(items, page.PageIndex, page.PageSize, total);
+            var total = PagingSupport.DeduceTotal(items.Count, page) ?? whereQuery.LongCount();
+            return PagingSupport.ToPage(items, page, total);
         }
 
         /// <inheritdoc />
@@ -200,32 +202,35 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         public async Task<IPage<TEntity>> FindPageAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
             CancellationToken cancellationToken = default)
         {
-            var (pagedQuery, filtered) = PagedQuery(criteriaBuilder, page, 0);
+            var (pagedQuery, whereQuery) = Paged(criteriaBuilder, page, 0);
             var items = await pagedQuery.ToListAsync(cancellationToken);
-            var total = PagingRules.DeduceTotal(items.Count, page)
-                ?? await filtered.LongCountAsync(cancellationToken);
-            return new Page<TEntity>(items, page.PageIndex, page.PageSize, total);
+            var total = PagingSupport.DeduceTotal(items.Count, page)
+                ?? await whereQuery.LongCountAsync(cancellationToken);
+            return PagingSupport.ToPage(items, page, total);
         }
 
-        private (IQueryable<TEntity> Query, IQueryable<TEntity> Filtered) PagedQuery(
+        private (IQueryable<TEntity> Page, IQueryable<TEntity> Where) Paged(
             Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page, int extra)
         {
-            PagingRules.EnsurePage(page);
-            var (criteria, filtered) = FilteredQuery(criteriaBuilder);
-            var keys = context.KeyProperties<TEntity>();
-            var orders = PagingRules.MergeOrders<TEntity>(criteria.Orders, page, keys.Select(k => k.Name));
+            PagingSupport.EnsurePage(page);
+            var (criteria, filter) = BuildCriteria(criteriaBuilder);
             var entityType = context.Model.FindEntityType(typeof(TEntity));
-            var pagedQuery = EntityPagingBuilder<TEntity>.BuildPagedQuery(
-                filtered, orders, entityType, (int)page.Offset, page.PageSize + extra);
-            return (pagedQuery, filtered);
+            IReadOnlyList<string> keyNames = entityType.KeyProperties().Select(k => k.Name).ToArray();
+            var orders = PagingSupport.MergeOrders<TEntity>(criteria.Orders, page, keyNames);
+            var source = NoTrackingQuery();
+            var pagedQuery = EntityExpressionBuilder<TEntity>.BuildPage(
+                source, filter, orders, entityType, page.Offset, page.PageSize + extra);
+            var whereQuery = EntityExpressionBuilder<TEntity>.BuildWhere(source, filter);
+            return (pagedQuery, whereQuery);
         }
 
-        private (ICriteria Criteria, IQueryable<TEntity> Filtered) FilteredQuery(Func<ICriteria, ICriteria> criteriaBuilder)
+        private static (ICriteria Criteria, EntityPredicate<TEntity> Filter) BuildCriteria(
+            Func<ICriteria, ICriteria> criteriaBuilder)
         {
             Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
             var criteria = criteriaBuilder(new Criteria());
             var predicate = EntityPredicateVisitor<TEntity>.BuildPredicate(criteria);
-            return (criteria, NoTrackingQuery().Where(predicate));
+            return (criteria, predicate);
         }
 
         /// <inheritdoc />

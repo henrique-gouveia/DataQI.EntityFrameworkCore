@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 using DataQI.Commons.Util;
 
@@ -39,8 +40,12 @@ namespace DataQI.EntityFrameworkCore.Extensions
         /// <param name="context">The context that maps <typeparamref name="TEntity"/>.</param>
         /// <returns>The key properties, or an empty list when the entity type has no primary key.</returns>
         internal static IReadOnlyList<(string Name, Type ClrType)> KeyProperties<TEntity>(this DbContext context)
+            => context.Model.FindEntityType(typeof(TEntity)).KeyProperties();
+
+        /// <summary>Gets the primary key properties from already resolved entity metadata.</summary>
+        internal static IReadOnlyList<(string Name, Type ClrType)> KeyProperties(this IEntityType entityType)
         {
-            var key = context.Model.FindEntityType(typeof(TEntity))?.FindPrimaryKey();
+            var key = entityType?.FindPrimaryKey();
             return key == null
                 ? Array.Empty<(string, Type)>()
                 : key.Properties.Select(p => (p.Name, p.ClrType)).ToArray();

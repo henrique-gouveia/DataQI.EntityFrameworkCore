@@ -47,6 +47,18 @@ namespace DataQI.EntityFrameworkCore.Test.Extensions
         }
 
         [Fact]
+        public void TestKeyPropertiesCanUseAlreadyResolvedEntityType()
+        {
+            using var compositeContext = CompositeKeyContext.CreateSeeded(rows: 0);
+            var entityType = compositeContext.Model.FindEntityType(typeof(CompositeKeyEntity));
+
+            var keys = entityType.KeyProperties();
+
+            Assert.Equal(new[] { (nameof(CompositeKeyEntity.A), typeof(int)),
+                (nameof(CompositeKeyEntity.B), typeof(int)) }, keys);
+        }
+
+        [Fact]
         public void TestKeyOfReadsTheValueOfASingleColumnKey()
         {
             var product = new Product { Id = 7 };
