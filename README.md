@@ -415,6 +415,7 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 - New! Add criteria and query-method paging through `ISlice<T>`, `IPage<T>` and `IPageRequest`.
 - Change! The provider interface now combines independent CRUD and paging contracts; custom implementations must supply the four paging methods.
 - **Breaking Change!** Adopted the Commons 4.x criteria AST and removed the old public criteria and command-building types listed in the migration guide.
+- **Breaking Change!** Criteria-based `Find` now throws `InvalidOperationException` when an order names an unmapped property.
 - Change! Replaced Dynamic LINQ criteria strings with typed predicates and ordering expressions.
 - Change! Null tests on non-nullable properties now throw a clear exception.
 - New! Added XML documentation for public APIs.

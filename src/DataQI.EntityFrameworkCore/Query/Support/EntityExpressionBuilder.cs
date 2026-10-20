@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 using DataQI.Commons.Query;
 using DataQI.Commons.Query.Support;
+using DataQI.Commons.Util;
 
 namespace DataQI.EntityFrameworkCore.Query.Support
 {
@@ -43,8 +44,8 @@ namespace DataQI.EntityFrameworkCore.Query.Support
             foreach (var order in orders)
             {
                 var mappedProperty = entityType.FindProperty(order.PropertyName);
-                if (mappedProperty == null)
-                    throw new InvalidOperationException($"Cannot order {typeof(TEntity).Name} by unknown property '{order.PropertyName}'.");
+                Assert.NotNull<InvalidOperationException>(mappedProperty,
+                    () => $"Cannot order {typeof(TEntity).Name} by unknown property '{order.PropertyName}'.");
 
                 Expression property = mappedProperty.PropertyInfo == null
                     ? Expression.Call(typeof(EF), nameof(EF.Property), new[] { mappedProperty.ClrType },
