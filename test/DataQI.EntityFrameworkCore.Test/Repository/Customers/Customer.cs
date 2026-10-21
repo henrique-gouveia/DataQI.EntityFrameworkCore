@@ -32,5 +32,8 @@ namespace DataQI.EntityFrameworkCore.Test.Repository.Customers
 
         [Column("DATE_REGISTER")]
         public DateTime DateRegister { get; set; }
+
+        [NotMapped]
+        public string Unmapped { get; set; }
     }
 }

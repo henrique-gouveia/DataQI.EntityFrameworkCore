@@ -573,6 +573,34 @@ namespace DataQI.EntityFrameworkCore.Test.Repository
             }
         }
 
+        [Theory]
+        [InlineData(false, false, "DoesNotExist")]
+        [InlineData(false, true, "DoesNotExist")]
+        [InlineData(true, false, "DoesNotExist")]
+        [InlineData(true, true, "DoesNotExist")]
+        [InlineData(false, false, nameof(Customer.Unmapped))]
+        [InlineData(false, true, nameof(Customer.Unmapped))]
+        [InlineData(true, false, nameof(Customer.Unmapped))]
+        [InlineData(true, true, nameof(Customer.Unmapped))]
+        public async Task TestCriteriaFindRejectsUnknownOrUnmappedOrder(
+            bool findOne, bool useAsyncMethod, string propertyName)
+        {
+            var repository = new EntityRepository<Customer, int>(customerContext);
+            Func<ICriteria, ICriteria> criteriaBuilder = criteria => criteria.AddOrder(Order.Asc(propertyName));
+
+            InvalidOperationException exception;
+            if (useAsyncMethod)
+                exception = findOne
+                    ? await Assert.ThrowsAsync<InvalidOperationException>(() => repository.FindOneAsync(criteriaBuilder))
+                    : await Assert.ThrowsAsync<InvalidOperationException>(() => repository.FindAsync(criteriaBuilder));
+            else
+                exception = findOne
+                    ? Assert.Throws<InvalidOperationException>(() => repository.FindOne(criteriaBuilder))
+                    : Assert.Throws<InvalidOperationException>(() => repository.Find(criteriaBuilder));
+
+            Assert.Equal($"Cannot order Customer by unknown property '{propertyName}'.", exception.Message);
+        }
+
         private IList<Customer> InsertTestCustomersList()
         {
             var customers = new List<Customer>()

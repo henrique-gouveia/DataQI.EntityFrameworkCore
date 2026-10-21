@@ -95,6 +95,19 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         }
 
         [Fact]
+        public void TestFindRejectsAnUnmappedClrProperty()
+        {
+            using var hidden = new HiddenPropertyContext();
+
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                EntityExpressionBuilder<HiddenPropertyEntity>.BuildFind(hidden.Set<HiddenPropertyEntity>(),
+                    Empty<HiddenPropertyEntity>(), new[] { Order.Asc(nameof(HiddenPropertyEntity.Unmapped)) },
+                    hidden.Model.FindEntityType(typeof(HiddenPropertyEntity))));
+
+            Assert.Equal("Cannot order HiddenPropertyEntity by unknown property 'Unmapped'.", exception.Message);
+        }
+
+        [Fact]
         public void TestFindCanOrderByAShadowKey()
         {
             using var context = ShadowKeyContext.CreateSeeded(rows: 5);
