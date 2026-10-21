@@ -21,6 +21,16 @@ public class EntityFrameworkCoreBenchmark : BenchmarkBase
         return entities;
     }
     
+    [Benchmark(Description = "Paging<T>")]
+    public IList<Entity> FindSlice()
+    {
+        PrepareStep();
+        var rows = Context.Entities!.AsNoTracking().OrderBy(e => e.Id).Skip(10).Take(11).ToList();
+        if (rows.Count > 10)
+            rows.RemoveAt(10);
+        return rows;
+    }
+
     [Benchmark(Description = "FindOne<T>")]
     public Entity? FindOne()
     {

@@ -149,7 +149,7 @@ namespace DataQI.EntityFrameworkCore.Query.Support
             return Expression.Property(Expression.Constant(holder, holderType), nameof(ValueHolder<object>.Value));
         }
 
-        public static Expression<Func<TEntity, bool>> BuildPredicate(ICriteria criteria)
+        public static EntityPredicate<TEntity> BuildPredicate(ICriteria criteria)
         {
             var parameter = Expression.Parameter(typeof(TEntity), "e");
             var visitor = new EntityPredicateVisitor<TEntity>(parameter);
@@ -164,7 +164,8 @@ namespace DataQI.EntityFrameworkCore.Query.Support
             if (body == null)
                 body = Expression.Constant(true);
 
-            return Expression.Lambda<Func<TEntity, bool>>(body, parameter);
+            return new EntityPredicate<TEntity>(
+                Expression.Lambda<Func<TEntity, bool>>(body, parameter), criteria.Criterions.Count == 0);
         }
     }
 }

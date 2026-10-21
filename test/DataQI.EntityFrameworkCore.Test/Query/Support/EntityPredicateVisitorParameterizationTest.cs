@@ -164,7 +164,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 : new object[] { "Adams", "Barnes" };
             var criteria = new Criteria().Add(Restrictions.In(propertyName, values));
             var predicate = EntityPredicateVisitor<Product>.BuildPredicate(criteria);
-            var contains = Assert.IsAssignableFrom<MethodCallExpression>(predicate.Body);
+            var contains = Assert.IsAssignableFrom<MethodCallExpression>(predicate.Expression.Body);
             var collection = Assert.IsAssignableFrom<MemberExpression>(contains.Arguments[0]);
 
             Assert.Equal(expectedType, collection.Type);
@@ -175,8 +175,8 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         {
             var criteria = new Criteria().Add(Restrictions.Equal("Amount", 10));
             var predicate = EntityPredicateVisitor<NullableEntity>.BuildPredicate(criteria);
-            var comparison = Assert.IsAssignableFrom<BinaryExpression>(predicate.Body);
-            var compiled = predicate.Compile();
+            var comparison = Assert.IsAssignableFrom<BinaryExpression>(predicate.Expression.Body);
+            var compiled = predicate.Expression.Compile();
 
             Assert.Equal(typeof(decimal?), comparison.Right.Type);
             Assert.True(compiled(new NullableEntity { Amount = 10m }));
@@ -200,7 +200,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 context.SaveChanges();
                 var criteria = new Criteria().Add(Restrictions.Equal("Amount", value));
                 var predicate = EntityPredicateVisitor<NullableEntity>.BuildPredicate(criteria);
-                var result = context.Set<NullableEntity>().Where(predicate).Single();
+                var result = context.Set<NullableEntity>().Where(predicate.Expression).Single();
 
                 Assert.Equal(expectedId, result.Id);
             }
@@ -223,8 +223,8 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 new Criteria().Add(Restrictions.Equal(propertyName, firstValue)));
             var second = EntityPredicateVisitor<Product>.BuildPredicate(
                 new Criteria().Add(Restrictions.Equal(propertyName, secondValue)));
-            var firstPredicate = first.Compile();
-            var secondPredicate = second.Compile();
+            var firstPredicate = first.Expression.Compile();
+            var secondPredicate = second.Expression.Compile();
             var firstEntity = new Product { Id = 10, Name = "Adams" };
             var secondEntity = new Product { Id = 20, Name = "Barnes" };
 
@@ -241,8 +241,8 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 new Criteria().Add(Restrictions.Equal("Amount", 10)));
             var second = EntityPredicateVisitor<NullableEntity>.BuildPredicate(
                 new Criteria().Add(Restrictions.Equal("Amount", null)));
-            var firstPredicate = first.Compile();
-            var secondPredicate = second.Compile();
+            var firstPredicate = first.Expression.Compile();
+            var secondPredicate = second.Expression.Compile();
 
             Assert.True(firstPredicate(new NullableEntity { Amount = 10m }));
             Assert.False(firstPredicate(new NullableEntity { Amount = null }));
@@ -261,8 +261,8 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 new Criteria().Add(Restrictions.In(propertyName, firstValues)));
             var second = EntityPredicateVisitor<Product>.BuildPredicate(
                 new Criteria().Add(Restrictions.In(propertyName, secondValues)));
-            var firstPredicate = first.Compile();
-            var secondPredicate = second.Compile();
+            var firstPredicate = first.Expression.Compile();
+            var secondPredicate = second.Expression.Compile();
             var firstEntity = new Product { Id = 10, Name = "Adams" };
             var secondEntity = new Product { Id = 20, Name = "Barnes" };
 
@@ -277,7 +277,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             var criteria = new Criteria().Add(Restrictions.In(propertyName, values));
             var predicate = EntityPredicateVisitor<Product>.BuildPredicate(criteria);
 
-            return context.Set<Product>().Where(predicate);
+            return context.Set<Product>().Where(predicate.Expression);
         }
 
         private static string QuerySql(DbContext context, string criterionKind, int value)
@@ -285,7 +285,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             var criteria = new Criteria().Add(Criterion(criterionKind, value));
             var predicate = EntityPredicateVisitor<Product>.BuildPredicate(criteria);
 
-            return context.Set<Product>().Where(predicate).ToQueryString();
+            return context.Set<Product>().Where(predicate.Expression).ToQueryString();
         }
 
         private static ICriterion Criterion(string criterionKind, int value)
