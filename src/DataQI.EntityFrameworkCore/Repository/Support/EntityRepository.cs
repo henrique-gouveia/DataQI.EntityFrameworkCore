@@ -169,7 +169,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             var (criteria, filter) = BuildCriteria(criteriaBuilder);
             var entityType = context.Model.FindEntityType(typeof(TEntity));
             return EntityExpressionBuilder<TEntity>.BuildFind(
-                NoTrackingQuery(), filter, criteria.Orders.ToArray(), entityType);
+                NoTrackingQuery(), filter, criteria.Orders, entityType);
         }
 
         /// <inheritdoc />

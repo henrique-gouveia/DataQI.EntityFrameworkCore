@@ -15,11 +15,11 @@ namespace DataQI.EntityFrameworkCore.Query.Support
     internal static class EntityExpressionBuilder<TEntity> where TEntity : class
     {
         public static IQueryable<TEntity> BuildFind(IQueryable<TEntity> source, EntityPredicate<TEntity> filter,
-            IReadOnlyList<IOrderCriterion> orders, IEntityType entityType)
+            IReadOnlyCollection<IOrderCriterion> orders, IEntityType entityType)
             => ApplyOrders(BuildWhere(source, filter), orders, entityType);
 
         public static IQueryable<TEntity> BuildPage(IQueryable<TEntity> source, EntityPredicate<TEntity> filter,
-            IReadOnlyList<IOrderCriterion> orders, IEntityType entityType, long skip, long take)
+            IReadOnlyCollection<IOrderCriterion> orders, IEntityType entityType, long skip, long take)
         {
             var ordered = ApplyOrders(BuildWhere(source, filter), orders, entityType);
             var expression = Expression.Call(typeof(Queryable), "Skip", new[] { typeof(TEntity) }, ordered.Expression,
@@ -33,7 +33,7 @@ namespace DataQI.EntityFrameworkCore.Query.Support
             => filter.IsEmpty ? source : source.Where(filter.Expression);
 
         private static IQueryable<TEntity> ApplyOrders(IQueryable<TEntity> query,
-            IReadOnlyList<IOrderCriterion> orders, IEntityType entityType)
+            IReadOnlyCollection<IOrderCriterion> orders, IEntityType entityType)
         {
             if (orders.Count == 0)
                 return query;
