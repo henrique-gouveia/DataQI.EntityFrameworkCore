@@ -19,7 +19,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestComparisonCoercesEnumNumber(string propertyName)
         {
             var criteria = new Criteria().Add(Restrictions.Equal(propertyName, 1));
-            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.True(predicate(NewEntity()));
             Assert.False(predicate(new CoercionEntity()));
@@ -31,7 +31,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestComparisonCoercesGuidString(string propertyName)
         {
             var criteria = new Criteria().Add(Restrictions.Equal(propertyName, externalId.ToString()));
-            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.True(predicate(NewEntity()));
             Assert.False(predicate(new CoercionEntity()));
@@ -43,7 +43,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestComparisonCoercesDateTimeOffsetString(string propertyName)
         {
             var criteria = new Criteria().Add(Restrictions.Equal(propertyName, "2026-10-09T12:30:00-03:00"));
-            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.True(predicate(NewEntity()));
             Assert.False(predicate(new CoercionEntity()));
@@ -55,7 +55,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestInCoercesEnumNumbers(string propertyName)
         {
             var criteria = new Criteria().Add(Restrictions.In(propertyName, new object[] { 1 }));
-            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.True(predicate(NewEntity()));
             Assert.False(predicate(new CoercionEntity()));
@@ -67,7 +67,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestInCoercesGuidStrings(string propertyName)
         {
             var criteria = new Criteria().Add(Restrictions.In(propertyName, new object[] { externalId.ToString() }));
-            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.True(predicate(NewEntity()));
             Assert.False(predicate(new CoercionEntity()));
@@ -79,7 +79,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestInCoercesDateTimeOffsetStrings(string propertyName)
         {
             var criteria = new Criteria().Add(Restrictions.In(propertyName, new object[] { "2026-10-09T12:30:00-03:00" }));
-            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.True(predicate(NewEntity()));
             Assert.False(predicate(new CoercionEntity()));
@@ -93,7 +93,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             var starts = timestamp.UtcDateTime;
             var ends = starts.AddDays(1);
             var criteria = new Criteria().Add(Restrictions.Between(propertyName, starts, ends));
-            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Expression.Compile();
             var lastEntity = NewEntity();
             lastEntity.Timestamp = timestamp.AddDays(1);
             lastEntity.NullableTimestamp = lastEntity.Timestamp;
@@ -113,7 +113,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             {
                 CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("pt-BR");
                 var criteria = new Criteria().Add(Restrictions.Equal(propertyName, "1.5"));
-                var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
+                var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Expression.Compile();
 
                 Assert.True(predicate(NewEntity()));
                 Assert.False(predicate(new CoercionEntity()));
@@ -131,7 +131,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestNullableComparisonStillMatchesNull(string propertyName)
         {
             var criteria = new Criteria().Add(Restrictions.Equal(propertyName, null));
-            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<CoercionEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.True(predicate(new CoercionEntity()));
             Assert.False(predicate(NewEntity()));

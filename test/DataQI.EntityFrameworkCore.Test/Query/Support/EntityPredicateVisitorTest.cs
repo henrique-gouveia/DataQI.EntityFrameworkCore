@@ -13,6 +13,18 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
 {
     public class EntityPredicateVisitorTest
     {
+        [Fact]
+        public void TestIsEmptyReflectsWhetherCriteriaHaveCriterions()
+        {
+            var empty = EntityPredicateVisitor<FakeEntity>.BuildPredicate(new Criteria());
+            var nonEmpty = EntityPredicateVisitor<FakeEntity>.BuildPredicate(new Criteria()
+                .Add(Restrictions.Equal("Name", "Adams")));
+
+            Assert.True(empty.IsEmpty);
+            Assert.False(nonEmpty.IsEmpty);
+            Assert.IsType<ConstantExpression>(empty.Expression.Body);
+        }
+
         private readonly FakeEntity[] entities = new[]
         {
             new FakeEntity { Name = "Adams", Stock = 10m, BirthDate = new DateTime(1990, 1, 1), Email = "adams@example.com" },
@@ -23,7 +35,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestComparisonMatchesCorrectly()
         {
             var criteria = new Criteria().Add(Restrictions.Equal("Name", "Adams"));
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Single(entities.Where(predicate));
             Assert.Equal("Adams", entities.Single(predicate).Name);
@@ -33,7 +45,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestComparisonCoercesMismatchedNumericType()
         {
             var criteria = new Criteria().Add(Restrictions.Equal("Stock", 10));
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Single(entities.Where(predicate));
         }
@@ -43,7 +55,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         {
             var criteria = new Criteria().Add(Restrictions.Equal("Name", "Adams"));
             var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria);
-            var comparison = Assert.IsAssignableFrom<BinaryExpression>(predicate.Body);
+            var comparison = Assert.IsAssignableFrom<BinaryExpression>(predicate.Expression.Body);
 
             Assert.NotEqual(ExpressionType.Constant, comparison.Right.NodeType);
         }
@@ -52,7 +64,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestBetweenIsInclusiveBothEnds()
         {
             var criteria = new Criteria().Add(Restrictions.Between("Stock", 10m, 30m));
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Equal(2, entities.Count(predicate));
         }
@@ -77,7 +89,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestInMatchesCorrectly()
         {
             var criteria = new Criteria().Add(Restrictions.In("Name", new object[] { "Adams" }));
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Single(entities.Where(predicate));
         }
@@ -86,7 +98,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestIsNullMatchesCorrectlyOnNullableProperty()
         {
             var criteria = new Criteria().Add(Restrictions.Null("Email"));
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Single(entities.Where(predicate));
             Assert.Equal("Barnes", entities.Single(predicate).Name);
@@ -108,7 +120,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestTextMatchContainingMatchesCorrectly()
         {
             var criteria = new Criteria().Add(Restrictions.Containing("Name", "dam"));
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Single(entities.Where(predicate));
         }
@@ -117,7 +129,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestNotNegatesInnerCorrectly()
         {
             var criteria = new Criteria().Add(Restrictions.Not(Restrictions.Equal("Name", "Adams")));
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Single(entities.Where(predicate));
             Assert.Equal("Barnes", entities.Single(predicate).Name);
@@ -130,7 +142,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
                 .Conjunction()
                 .Add(Restrictions.Equal("Name", "Adams"))
                 .Add(Restrictions.Equal("Stock", 10m)));
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Single(entities.Where(predicate));
         }
@@ -138,7 +150,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         [Fact]
         public void TestEmptyCriteriaMatchesEveryEntity()
         {
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(new Criteria()).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(new Criteria()).Expression.Compile();
 
             Assert.Equal(entities.Length, entities.Count(predicate));
         }
@@ -243,7 +255,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             var criteria = new Criteria()
                 .Add(Restrictions.Equal("Name", "Adams"))
                 .Add(Restrictions.Equal("Stock", 10m));
-            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Single(entities.Where(predicate));
         }
@@ -338,7 +350,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         }
 
         private Func<FakeEntity, bool> Compile(ICriteria criteria)
-            => EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Compile();
+            => EntityPredicateVisitor<FakeEntity>.BuildPredicate(criteria).Expression.Compile();
 
         private void AssertNotMatches(ICriterion inner, string expectedName)
             => Assert.Equal(expectedName, entities.Single(Compile(new Criteria().Add(Restrictions.Not(inner)))).Name);

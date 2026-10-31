@@ -46,7 +46,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         {
             var criteria = new Criteria().Add(new Comparison("Name", kind, "Miller"));
             var predicate = EntityPredicateVisitor<StringEntity>.BuildPredicate(criteria);
-            var query = context.Set<StringEntity>().Where(predicate);
+            var query = context.Set<StringEntity>().Where(predicate.Expression);
             var sql = query.ToQueryString();
             var ids = query.OrderBy(entity => entity.Id).Select(entity => entity.Id).ToArray();
 
@@ -61,7 +61,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         {
             var criteria = new Criteria().Add(Restrictions.Between("Name", starts, ends));
             var predicate = EntityPredicateVisitor<StringEntity>.BuildPredicate(criteria);
-            var query = context.Set<StringEntity>().Where(predicate);
+            var query = context.Set<StringEntity>().Where(predicate.Expression);
             var sql = query.ToQueryString();
             var ids = query.OrderBy(entity => entity.Id).Select(entity => entity.Id).ToArray();
 
@@ -77,7 +77,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         public void TestNullStringPropertyUsesCompareSemanticsInMemory(ComparisonKind kind, bool expected)
         {
             var criteria = new Criteria().Add(new Comparison("Name", kind, "Miller"));
-            var predicate = EntityPredicateVisitor<StringEntity>.BuildPredicate(criteria).Compile();
+            var predicate = EntityPredicateVisitor<StringEntity>.BuildPredicate(criteria).Expression.Compile();
 
             Assert.Equal(expected, predicate(new StringEntity { Name = null }));
         }
@@ -114,7 +114,7 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
         {
             var criteria = new Criteria().Add(Restrictions.Equal("Name", null));
             var predicate = EntityPredicateVisitor<StringEntity>.BuildPredicate(criteria);
-            var result = context.Set<StringEntity>().Where(predicate).Single();
+            var result = context.Set<StringEntity>().Where(predicate.Expression).Single();
 
             Assert.Equal(4, result.Id);
         }
@@ -152,16 +152,16 @@ namespace DataQI.EntityFrameworkCore.Test.Query.Support
             context.Dispose();
         }
 
-        public class StringEntity
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-        }
-
         public interface IStringRepository : IEntityRepository<StringEntity, int>
         {
             IEnumerable<StringEntity> FindByNameGreaterThan(string name);
             Task<IEnumerable<StringEntity>> FindByNameGreaterThanAsync(string name, CancellationToken cancellationToken = default);
+        }
+
+        public class StringEntity
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
         }
 
         private sealed class StringContext : DbContext

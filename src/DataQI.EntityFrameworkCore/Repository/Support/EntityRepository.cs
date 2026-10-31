@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 using DataQI.Commons.Query;
+using DataQI.Commons.Repository.Paging;
+using DataQI.Commons.Repository.Paging.Support;
 using DataQI.Commons.Query.Support;
 using DataQI.Commons.Util;
 
@@ -101,9 +103,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         public IEnumerable<TEntity> Find(Expression<Func<TEntity, bool>> predicate)
         {
             Assert.NotNull(predicate, "Predicate must not be null");
-            var entities = context
-                .Set<TEntity>()
-                .AsNoTracking()
+            var entities = NoTrackingQuery()
                 .Where(predicate)
                 .ToList();
             return entities;
@@ -114,9 +114,7 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
             CancellationToken cancellationToken = default)
         {
             Assert.NotNull(predicate, "Predicate must not be null");
-            var entities = await context
-                .Set<TEntity>()
-                .AsNoTracking()
+            var entities = await NoTrackingQuery()
                 .Where(predicate)
                 .ToListAsync(cancellationToken);
             return entities;
@@ -165,26 +163,81 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         public Task<TEntity> FindOneAsync(Func<ICriteria, ICriteria> criteriaBuilder,
             CancellationToken cancellationToken = default)
             => CriteriaQuery(criteriaBuilder).SingleOrDefaultAsync(cancellationToken);
-
+        
         private IQueryable<TEntity> CriteriaQuery(Func<ICriteria, ICriteria> criteriaBuilder)
+        {
+            var (criteria, filter) = BuildCriteria(criteriaBuilder);
+            var entityType = context.Model.FindEntityType(typeof(TEntity));
+            return EntityExpressionBuilder<TEntity>.BuildFind(
+                NoTrackingQuery(), filter, criteria.Orders, entityType);
+        }
+
+        /// <inheritdoc />
+        public ISlice<TEntity> FindSlice(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
+        {
+            var (pagedQuery, _) = Paged(criteriaBuilder, page, true);
+            return PagingSupport.ToSlice(pagedQuery.ToList(), page);
+        }
+
+        /// <inheritdoc />
+        public async Task<ISlice<TEntity>> FindSliceAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
+            CancellationToken cancellationToken = default)
+        {
+            var (pagedQuery, _) = Paged(criteriaBuilder, page, true);
+            return PagingSupport.ToSlice(await pagedQuery.ToListAsync(cancellationToken), page);
+        }
+
+        /// <inheritdoc />
+        /// <remarks>The page and total may require two non-atomic queries. Use a transaction when consistency matters.</remarks>
+        public IPage<TEntity> FindPage(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page)
+        {
+            var (pagedQuery, whereQuery) = Paged(criteriaBuilder, page, false);
+            var items = pagedQuery.ToList();
+            var total = PagingSupport.DeduceTotal(items.Count, page) ?? whereQuery.LongCount();
+            return PagingSupport.ToPage(items, page, total);
+        }
+
+        /// <inheritdoc />
+        /// <remarks>The page and total may require two non-atomic queries. Use a transaction when consistency matters.</remarks>
+        public async Task<IPage<TEntity>> FindPageAsync(Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page,
+            CancellationToken cancellationToken = default)
+        {
+            var (pagedQuery, whereQuery) = Paged(criteriaBuilder, page, false);
+            var items = await pagedQuery.ToListAsync(cancellationToken);
+            var total = PagingSupport.DeduceTotal(items.Count, page)
+                ?? await whereQuery.LongCountAsync(cancellationToken);
+            return PagingSupport.ToPage(items, page, total);
+        }
+
+        private (IQueryable<TEntity> Page, IQueryable<TEntity> Where) Paged(
+            Func<ICriteria, ICriteria> criteriaBuilder, IPageRequest page, bool forSlice)
+        {
+            var take = PagingSupport.FetchSize(page, forSlice);
+            var (criteria, filter) = BuildCriteria(criteriaBuilder);
+            var entityType = context.Model.FindEntityType(typeof(TEntity));
+            IReadOnlyList<string> keyNames = entityType.KeyProperties().Select(k => k.Name).ToArray();
+            var orders = PagingSupport.MergeOrders<TEntity>(criteria.Orders, page, keyNames);
+            var source = NoTrackingQuery();
+            var pagedQuery = EntityExpressionBuilder<TEntity>.BuildPage(
+                source, filter, orders, entityType, page.Offset, take);
+            var whereQuery = EntityExpressionBuilder<TEntity>.BuildWhere(source, filter);
+            return (pagedQuery, whereQuery);
+        }
+
+        private static (ICriteria Criteria, EntityPredicate<TEntity> Filter) BuildCriteria(
+            Func<ICriteria, ICriteria> criteriaBuilder)
         {
             Assert.NotNull(criteriaBuilder, "CriteriaBuilder must not be null");
             var criteria = criteriaBuilder(new Criteria());
-
             var predicate = EntityPredicateVisitor<TEntity>.BuildPredicate(criteria);
-            var query = context.Set<TEntity>().AsNoTracking().Where(predicate);
-
-            return EntityOrderedQueryBuilder<TEntity>.BuildOrderedQuery(query, criteria.Orders);
+            return (criteria, predicate);
         }
 
         /// <inheritdoc />
         /// <remarks>The returned entities are not tracked by the context.</remarks>
         public IEnumerable<TEntity> FindAll()
         {
-            var entities = context
-                .Set<TEntity>()
-                .AsNoTracking()
-                .ToList();
+            var entities = NoTrackingQuery().ToList();
             return entities;
         }
 
@@ -192,12 +245,11 @@ namespace DataQI.EntityFrameworkCore.Repository.Support
         /// <remarks>The returned entities are not tracked by the context.</remarks>
         public async Task<IEnumerable<TEntity>> FindAllAsync(CancellationToken cancellationToken = default)
         {
-            var entities = await context
-                .Set<TEntity>()
-                .AsNoTracking()
-                .ToListAsync(cancellationToken);
+            var entities = await NoTrackingQuery().ToListAsync(cancellationToken);
             return entities;
         }
+
+        private IQueryable<TEntity> NoTrackingQuery() => context.Set<TEntity>().AsNoTracking();
 
         /// <summary>Finds the entity with the given key value.</summary>
         /// <param name="id">The value of the entity's single key property; must not be <c>null</c>.</param>
