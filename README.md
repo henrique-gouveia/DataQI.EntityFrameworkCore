@@ -410,10 +410,10 @@ Intel Core i7-8565U CPU 1.80GHz (Whiskey Lake), 1 CPU, 8 logical and 4 physical 
 
 ## Release Notes
 
-**v6.0.0 - current source**
+**v6.0.0 - upcoming release**
 
-- New! Add criteria and query-method paging through `ISlice<T>`, `IPage<T>` and `IPageRequest`.
-- Change! The provider interface now combines independent CRUD and paging contracts; custom implementations must supply the four paging methods.
+- New! Add slice and page queries through criteria or query methods, with stable ordering and a count query only when the total cannot be deduced.
+- **Breaking Change!** `IEntityRepository<TEntity, TId>` now combines the independent CRUD and paging contracts; custom implementations must add `FindSlice`, `FindSliceAsync`, `FindPage` and `FindPageAsync`.
 - **Breaking Change!** Adopted the Commons 4.x criteria AST and removed the old public criteria and command-building types listed in the migration guide.
 - **Breaking Change!** Criteria-based `Find` now throws `InvalidOperationException` when an order names an unmapped property.
 - Change! Replaced Dynamic LINQ criteria strings with typed predicates and ordering expressions.
